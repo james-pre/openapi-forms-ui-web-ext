@@ -2,11 +2,11 @@
 import webpack, { Configuration } from "webpack";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
-import WebExtPlugin from "web-ext-plugin";
 
 const outputDirectory = path.resolve(import.meta.dirname, "dist/");
 
 const configuration: Configuration = {
+  context: import.meta.dirname,
   entry: {
     app: "./src/pages/app/main.ts",
     options: "./src/pages/options/main.ts",
@@ -45,7 +45,16 @@ const configuration: Configuration = {
     path: outputDirectory,
   },
   plugins: [
-    new webpack.EnvironmentPlugin([]),
+    new webpack.EnvironmentPlugin({
+      NODE_DISABLE_COLORS: "true",
+    }),
+    new webpack.DefinePlugin({
+      "process.browser": JSON.stringify(true),
+      "process.platform": JSON.stringify("linux"),
+    }),
+    new webpack.ProvidePlugin({
+      Buffer: ["buffer", "Buffer"],
+    }),
     new CopyWebpackPlugin({
       options: {},
       patterns: [
@@ -70,6 +79,15 @@ const configuration: Configuration = {
   ],
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
+    fallback: {
+      buffer: "buffer",
+      fs: "@zenfs/core",
+      http: "stream-http",
+      https: "https-browserify",
+      path: "path-browserify",
+      util: "util",
+      url: "url",
+    },
   },
   target: ["web"],
 };
