@@ -2,6 +2,9 @@
 import webpack, { Configuration } from "webpack";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
+import WebExtPlugin from "web-ext-plugin";
+
+const outputDirectory = path.resolve(import.meta.dirname, "dist/");
 
 const configuration: Configuration = {
   entry: {
@@ -39,7 +42,7 @@ const configuration: Configuration = {
   output: {
     clean: true,
     filename: "[name].js",
-    path: path.resolve(import.meta.dirname, "dist/"),
+    path: outputDirectory,
   },
   plugins: [
     new webpack.EnvironmentPlugin([]),

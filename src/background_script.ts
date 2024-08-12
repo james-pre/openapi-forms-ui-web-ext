@@ -8,4 +8,4 @@ async function openApp() {
   });
 }
 
-browser.browserAction.onClicked.addListener(openApp);
+browser.action.onClicked.addListener(openApp);

@@ -1,26 +1,39 @@
 {
-  "manifest_version": 2,
-  "name": "openapi-forms-ui-web-ext",
-  "description": "description",
-  "version": "0.0.1",
-  "icons": {
-    "64": "assets/icons/icon.png"
-  },
-  "background": {
-    "scripts": ["background_script.js"]
-  },
-  "content_scripts": [
-    {
-      "matches": ["*://*.mozilla.org/*"],
-      "js": ["content_script.js"]
-    }
-  ],
-  "browser_action": {
+  "action": {
     "default_icon": {
       "64": "assets/icons/icon.png"
     }
   },
+  "author": "Ensemble Software S.R.L.",
+  "background": {
+    "scripts": ["background_script.js"],
+    "service_worker": "background_script.js"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{4fe8be82-2aeb-4457-a912-3a404779c15f}"
+    },
+    "gecko_android": {}
+  },
+  "content_scripts": [
+    {
+      "js": ["content_script.js"],
+      "matches": ["*://*.mozilla.org/*"]
+    }
+  ],
+  "description": "description",
+  "developer": {
+    "name": "Ensemble Software S.R.L.",
+    "url": "https://www.ensemblesoftware.ro/"
+  },
+  "homepage_url": "https://www.ensemblesoftware.ro/",
+  "icons": {
+    "64": "assets/icons/icon.png"
+  },
+  "manifest_version": 3,
+  "name": "openapi-forms-ui-web-ext",
   "options_ui": {
     "page": "options.html"
-  }
+  },
+  "version": "0.0.1"
 }

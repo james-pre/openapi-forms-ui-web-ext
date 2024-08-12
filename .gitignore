@@ -143,6 +143,11 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/node
 
-.idea/
+.idea/*
+!.idea/.idea.openapi-forms-ui-web-ext.dir/
+.idea/.idea.openapi-forms-ui-web-ext.dir/.idea/*
+!.idea/.idea.openapi-forms-ui-web-ext.dir/.idea/.gitignore
+!.idea/.idea.openapi-forms-ui-web-ext.dir/.idea/jsonSchemas.xml
 
-openapi-forms-ui-web-ext.zip
+dist/
+web-ext-artifacts/
