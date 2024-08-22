@@ -22,13 +22,17 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@9.7.0+sha512.dc09430156b427f5ecfc79888899e1c39d2d690f004be70e05230b72cb173d96839587545d09429b55ac3c429c801b4dc3c0e002f653830a420fa2dd4e3cf9cf",
+  "packageManager": "pnpm@9.7.1+sha512.faf344af2d6ca65c4c5c8c2224ea77a81a5e8859cbc4e06b1511ddce2f0151512431dd19e6aff31f2c6a8f5f2aced9bd2273e1fed7dd4de1868984059d2c4247",
   "engines": {
     "pnpm": ">=9.0.0 <10.0.0",
     "node": ">=20.0.0 <21.0.0"
   },
   "dependencies": {
+    "@jsonforms/core": "^3.3.0",
+    "@jsonforms/material-renderers": "^3.3.0",
+    "@jsonforms/react": "^3.3.0",
     "@zenfs/core": "^0.16.2",
+    "ajv": "^8.17.1",
     "buffer": "^6.0.3",
     "https-browserify": "^1.0.0",
     "oas": "^24.5.3",
@@ -37,6 +41,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "stream-http": "^3.2.0",
+    "styled-components": "^6.1.12",
     "url": "^0.11.4",
     "util": "^0.12.5"
   },
@@ -60,6 +65,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.0.0",
+    "typescript-plugin-styled-components": "^3.0.0",
     "web-ext": "^8.2.0",
     "web-ext-plugin": "^2.10.0",
     "webextension-polyfill": "^0.12.0",

@@ -4,7 +4,7 @@ import browser from "webextension-polyfill";
 
 async function openApp() {
   await browser.tabs.create({
-    url: "app.html",
+    url: "main.html",
   });
 }
 

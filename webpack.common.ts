@@ -2,6 +2,7 @@
 import webpack, { Configuration } from "webpack";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
+import { createTransformer as createStyledComponentsTransformer } from "typescript-plugin-styled-components";
 
 const outputDirectory = path.resolve(import.meta.dirname, "dist/");
 
@@ -17,8 +18,13 @@ const configuration: Configuration = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: "ts-loader",
         exclude: /node_modules/,
+        loader: "ts-loader",
+        options: {
+          getCustomTransformers: () => ({
+            before: [createStyledComponentsTransformer({})],
+          }),
+        },
       },
       {
         test: /\.css|\.sass$/,
@@ -75,6 +81,11 @@ const configuration: Configuration = {
       chunks: ["app"],
       filename: "app.html",
       template: "src/pages/app/index.html",
+    }),
+    new HtmlWebpackPlugin({
+      chunks: ["main"],
+      filename: "main.html",
+      template: "src/pages/main/index.html",
     }),
   ],
   resolve: {
