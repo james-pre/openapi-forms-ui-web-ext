@@ -3,9 +3,10 @@ import { JsonForms, JsonFormsContext } from "@jsonforms/react";
 import React, {
   useCallback,
   useContext,
-  useEffect,
+  useId,
   useMemo,
   useReducer,
+  useState,
 } from "react";
 import { JSONSchema } from "../JSONSchema";
 import * as ajv from "ajv";
@@ -23,8 +24,16 @@ export type ParametersState = Record<
   }
 >;
 
+export type ExecuteOperationOptions = {
+  contentType: string | undefined;
+};
+
 export interface OpenApiOperationDisplayProps {
-  onExecute?: (bodyState: BodyState, parametersState: ParametersState) => void;
+  onExecute?: (
+    bodyState: BodyState,
+    parametersState: ParametersState,
+    options: ExecuteOperationOptions,
+  ) => void;
   operation: Operation;
 }
 
@@ -32,6 +41,8 @@ const OpenApiOperationDisplay = ({
   onExecute,
   operation,
 }: OpenApiOperationDisplayProps) => {
+  const contentTypeSelectId = useId();
+
   const requestBody = useMemo(() => {
     let x = operation.getRequestBody();
     if (Array.isArray(x)) {
@@ -45,6 +56,10 @@ const OpenApiOperationDisplay = ({
     [requestBody],
   );
   const parameters = useMemo(() => operation.getParameters(), [operation]);
+  const availableContentTypes = useMemo(
+    () => operation.getRequestBodyMediaTypes(),
+    [operation],
+  );
 
   const jsonFormsContext = useContext(JsonFormsContext);
   const cells = useMemo(() => jsonFormsContext.cells ?? [], [jsonFormsContext]);
@@ -82,9 +97,16 @@ const OpenApiOperationDisplay = ({
       errors: undefined,
     },
   );
+  const [contentType, setContentType] = useState(() =>
+    availableContentTypes.at(0),
+  );
+
   const onExecuteClick = useCallback(
-    () => onExecute?.(bodyState, parametersState),
-    [bodyState, onExecute, parametersState],
+    () =>
+      onExecute?.(bodyState, parametersState, {
+        contentType: contentType,
+      }),
+    [bodyState, contentType, onExecute, parametersState],
   );
 
   return (
@@ -124,15 +146,37 @@ const OpenApiOperationDisplay = ({
 
       <p>Request Body</p>
       {requestBodySchema ? (
-        <JsonForms
-          cells={cells}
-          data={bodyState.data}
-          onChange={({ data, errors }) => {
-            updateBodyState({ data, errors });
-          }}
-          renderers={renderers}
-          schema={requestBodySchema}
-        />
+        <>
+          {availableContentTypes.length > 0 ? (
+            <div>
+              <label htmlFor={contentTypeSelectId}>Content Type</label>
+              <select
+                id={contentTypeSelectId}
+                onChange={(e) => setContentType(e.target.value)}
+              >
+                {availableContentTypes.map((availableContentType) => (
+                  <option
+                    key={availableContentType}
+                    value={availableContentType}
+                  >
+                    {availableContentType}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <></>
+          )}
+          <JsonForms
+            cells={cells}
+            data={bodyState.data}
+            onChange={({ data, errors }) => {
+              updateBodyState({ data, errors });
+            }}
+            renderers={renderers}
+            schema={requestBodySchema}
+          />
+        </>
       ) : (
         <>
           <i>No request body</i>

@@ -10,6 +10,7 @@ import OASNormalize from "oas-normalize";
 import Accordion from "../../components/Accordion";
 import OpenApiOperationDisplay, {
   BodyState,
+  ExecuteOperationOptions,
   ParametersState,
 } from "../../components/OpenApiOperationDisplay";
 import OpenApiOperationHeader from "../../components/OpenApiOperationHeader";
@@ -100,6 +101,7 @@ const App = () => {
       operation: Operation,
       bodyState: BodyState,
       parametersState: ParametersState,
+      options: ExecuteOperationOptions,
     ) => {
       let path = operation.path;
       operation
@@ -123,17 +125,54 @@ const App = () => {
           );
         });
 
+      const headers: Record<string, string> = {};
+      operation
+        .getParameters()
+        .filter((parameter) => parameter.in === "header")
+        .forEach((parameter) => {
+          headers[parameter.name] = `${parametersState[parameter.name].data}`;
+        });
+      const contentType = options.contentType;
+      if (contentType) {
+        headers["Content-Type"] = contentType;
+      }
+
       const body = bodyState.data;
       console.log(body);
+      let serializedBody = undefined;
+      if (
+        operation.method !== "get" &&
+        operation.method !== "head" &&
+        body !== undefined
+      ) {
+        // TODO: Support serialization of more content-types
+        switch (contentType) {
+          case "application/json": {
+            serializedBody = JSON.stringify(body);
+            break;
+          }
+          case "application/xml": {
+            break;
+          }
+          case "application/x-www-form-urlencoded": {
+            break;
+          }
+          case "multipart/form-data": {
+            break;
+          }
+          default:
+            throw new Error(`Unknown content type ${contentType}`);
+        }
+      }
+
       const response = await fetch(url, {
         method: operation.method,
-        body:
-          operation.method !== "get" &&
-          operation.method !== "head" &&
-          body !== undefined
-            ? JSON.stringify(body)
-            : undefined,
+        body: serializedBody,
+        headers: {
+          ...headers,
+        },
       }).then((response) => response.json());
+      // TODO: Support deserialization of more content-types
       console.log(response);
     },
     [targetServer],
@@ -190,8 +229,13 @@ const App = () => {
                       }
                     >
                       <OpenApiOperationDisplay
-                        onExecute={(bodyState, parametersState) =>
-                          sendRequest(operation, bodyState, parametersState)
+                        onExecute={(bodyState, parametersState, options) =>
+                          sendRequest(
+                            operation,
+                            bodyState,
+                            parametersState,
+                            options,
+                          )
                         }
                         operation={operation}
                       />
