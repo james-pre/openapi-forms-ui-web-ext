@@ -6,7 +6,6 @@
   },
   "author": "Ensemble Software S.R.L.",
   "background": {
-    "scripts": ["background_script.js"],
     "service_worker": "background_script.js"
   },
   "browser_specific_settings": {
@@ -21,7 +20,7 @@
       "matches": ["*://*.mozilla.org/*"]
     }
   ],
-  "description": "description",
+  "description": "This web extension provides a user-friendly interface for interacting with OpenAPI specifications.",
   "developer": {
     "name": "Ensemble Software S.R.L.",
     "url": "https://www.ensemblesoftware.ro/"
@@ -31,12 +30,12 @@
     "64": "assets/icons/icon.png"
   },
   "manifest_version": 3,
-  "name": "openapi-forms-ui-web-ext",
+  "name": "OpenAPI Forms UI",
   "options_ui": {
     "page": "options.html"
   },
   "sandbox": {
     "pages": ["app.html"]
   },
-  "version": "0.0.1"
+  "version": "0.0.2"
 }

@@ -7,7 +7,6 @@ import {
   materialRenderers,
 } from "@jsonforms/material-renderers";
 import OASNormalize from "oas-normalize";
-import Accordion from "../../components/Accordion";
 import OpenApiOperationDisplay, {
   BodyState,
   ExecuteOperationOptions,
@@ -16,6 +15,28 @@ import OpenApiOperationDisplay, {
 import OpenApiOperationHeader from "../../components/OpenApiOperationHeader";
 import ServerSelector from "../../components/ServerSelector";
 import { Operation } from "oas/operation";
+import Ajv from "ajv";
+import addAjvFormats from "ajv-formats";
+import addMetaSchema2019 from "ajv/dist/refs/json-schema-2019-09";
+import { JsonFormsRendererRegistryEntry } from "@jsonforms/core";
+import PatternPropertiesRenderer, {
+  patternPropertiesControlTester,
+} from "../../forms/PatternPropertiesRenderer";
+
+function removeIdsFromSchema(schema: any) {
+  if (Array.isArray(schema)) {
+    // If the schema is an array, process each item
+    schema.forEach(removeIdsFromSchema);
+  } else if (typeof schema === "object" && schema !== null) {
+    // If the schema is an object, check for the $id field and delete it
+    delete schema.$id;
+
+    // Recursively process properties and items if they exist
+    Object.keys(schema).forEach((key) => {
+      removeIdsFromSchema(schema[key]);
+    });
+  }
+}
 
 const App = () => {
   const renderers = useMemo(
@@ -56,6 +77,10 @@ const App = () => {
         }),
       } as JsonFormsRendererRegistryEntry,*/
       ...materialRenderers,
+      {
+        tester: patternPropertiesControlTester,
+        renderer: PatternPropertiesRenderer,
+      } as JsonFormsRendererRegistryEntry,
     ],
     [],
   );
@@ -69,12 +94,14 @@ const App = () => {
     (async () => {
       if (!schema) return;
 
-      const normalizedOasDocument = await new OASNormalize(schema, {}).validate(
-        {
+      const normalizedOasDocument = await new OASNormalize(schema, {})
+        .validate({
           convertToLatest: true,
-        },
-      );
-      console.log(normalizedOasDocument);
+        })
+        .then((definition) => new OASNormalize(definition).deref());
+      removeIdsFromSchema(normalizedOasDocument);
+
+      console.log("Normalized OAS Document", normalizedOasDocument);
       setSchemaNormalized(JSON.stringify(normalizedOasDocument));
     })();
   }, [schema, setSchemaNormalized]);
@@ -83,19 +110,26 @@ const App = () => {
       if (!schemaNormalized) return;
 
       const newOas = new Oas(schemaNormalized);
-      await newOas.dereference({ preserveRefAsJSONSchemaTitle: true });
       console.log(newOas);
       setOas(newOas);
     })();
   }, [schemaNormalized, setOas]);
+  const ajv = useMemo(() => {
+    const a = new Ajv({
+      strict: "log",
+      meta: false,
+      defaultMeta: "https://json-schema.org/draft/2019-09/schema",
+    });
+    addAjvFormats(a, {});
+    addMetaSchema2019.call(a);
 
-  const operation = useMemo(() => {
-    return oas?.operation("/pet/{petId}/uploadImage", "post") ?? null;
-  }, [oas]);
-  const [targetServer, setTargetServer] = useState<string>("");
+    return a;
+  }, []);
   useEffect(() => {
-    console.log(targetServer);
-  }, [targetServer]);
+    console.log("ajv", ajv);
+  }, [ajv]);
+
+  const [targetServer, setTargetServer] = useState<string>("");
   const sendRequest = useCallback(
     async (
       operation: Operation,
@@ -138,7 +172,6 @@ const App = () => {
       }
 
       const body = bodyState.data;
-      console.log(body);
       let serializedBody = undefined;
       if (
         operation.method !== "get" &&
@@ -177,6 +210,9 @@ const App = () => {
     },
     [targetServer],
   );
+  const [selectedOperation, setSelectedOperation] = useState<Operation | null>(
+    null,
+  );
 
   return (
     <>
@@ -184,6 +220,12 @@ const App = () => {
         value={{
           cells,
           renderers,
+          core: {
+            ajv: ajv,
+            data: undefined!,
+            schema: undefined!,
+            uischema: undefined!,
+          },
         }}
       >
         <h1>My App</h1>
@@ -191,12 +233,13 @@ const App = () => {
           <>
             <OpenApiSchemaInput onSchemaChange={setSchema} />
           </>
-        ) : oas && operation ? (
+        ) : oas ? (
           <>
             <button
               onClick={() => {
                 setSchema(null);
                 setOas(null);
+                setSelectedOperation(null);
               }}
             >
               Back to schema selection
@@ -210,39 +253,48 @@ const App = () => {
               onServerChange={(server) => setTargetServer(server)}
             />
 
-            {/*<div>{getOperationForm(operation)}</div>*/}
             <h3>Available Operations</h3>
-            <div>
-              {Object.entries(oas.getPaths()).map(([path, pathInfo]) =>
-                Object.entries(pathInfo).map(([method, operation]) => (
-                  <div
-                    key={path + " " + method}
-                    className="accordion-container"
-                  >
-                    <Accordion
-                      header={
-                        <OpenApiOperationHeader
-                          method={method}
-                          path={path}
-                          summary={operation.getSummary()}
-                        />
+            <div style={{ display: "flex", flexDirection: "row" }}>
+              <div style={{ width: "30dvw" }}>
+                {Object.entries(oas.getPaths()).map(([path, pathInfo]) =>
+                  Object.entries(pathInfo).map(([method, operation]) => (
+                    <div key={path + " " + method}>
+                      <button
+                        role="button"
+                        onClick={() => setSelectedOperation(operation)}
+                      >
+                        {operation.getSummary()}
+                      </button>
+                    </div>
+                  )),
+                )}
+              </div>
+              <div style={{ flexGrow: 1 }}>
+                {selectedOperation ? (
+                  <>
+                    <OpenApiOperationHeader
+                      method={selectedOperation.method}
+                      path={selectedOperation.path}
+                      summary={selectedOperation.getSummary()}
+                    />
+                    <OpenApiOperationDisplay
+                      operation={selectedOperation}
+                      onExecute={(bodyState, parametersState, options) =>
+                        void sendRequest(
+                          selectedOperation,
+                          bodyState,
+                          parametersState,
+                          options,
+                        )
                       }
-                    >
-                      <OpenApiOperationDisplay
-                        onExecute={(bodyState, parametersState, options) =>
-                          sendRequest(
-                            operation,
-                            bodyState,
-                            parametersState,
-                            options,
-                          )
-                        }
-                        operation={operation}
-                      />
-                    </Accordion>
-                  </div>
-                )),
-              )}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p>Select an operation from the sidebar</p>
+                  </>
+                )}
+              </div>
             </div>
           </>
         ) : (
