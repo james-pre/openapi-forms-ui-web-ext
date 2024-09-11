@@ -1,4 +1,4 @@
-﻿# openapi-forms-ui-web-ext
+﻿# OpenAPI Forms UI
 
 ## Prerequisites
 
@@ -25,3 +25,4 @@ Running `pnpm run build:production` will build the extension source files in pro
 
 Running `pnpm build-ext` will package the build output in a zip (output path is `web-ext-artifacts/openapi-forms-ui-web-ext-[version].zip`)
 which can be uploaded on browser extension stores (or manually loaded in the browser).
+~~~~

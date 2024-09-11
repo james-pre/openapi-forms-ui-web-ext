@@ -21,7 +21,7 @@
       "matches": ["*://*.mozilla.org/*"]
     }
   ],
-  "description": "description",
+  "description": "This web extension provides a user-friendly interface for interacting with OpenAPI specifications. It allows users to view and execute API operations, manage request parameters, and handle request bodies using dynamically generated forms.",
   "developer": {
     "name": "Ensemble Software S.R.L.",
     "url": "https://www.ensemblesoftware.ro/"
@@ -31,12 +31,12 @@
     "64": "assets/icons/icon.png"
   },
   "manifest_version": 3,
-  "name": "openapi-forms-ui-web-ext",
+  "name": "OpenAPI Forms UI",
   "options_ui": {
     "page": "options.html"
   },
   "sandbox": {
     "pages": ["app.html"]
   },
-  "version": "0.0.1"
+  "version": "0.0.2"
 }

@@ -1,15 +1,16 @@
 import { Operation } from "oas/operation";
-import { JsonForms, JsonFormsContext } from "@jsonforms/react";
+import { JsonForms } from "@jsonforms/react";
 import React, {
   useCallback,
-  useContext,
   useId,
   useMemo,
   useReducer,
   useState,
 } from "react";
-import { JSONSchema } from "../JSONSchema";
 import * as ajv from "ajv";
+import { useJsonFormsConfig } from "../hooks/useJsonFormsConfig.hook";
+import { JSONSchema } from "../json-schema/JSONSchema";
+import { generateDefaultValue } from "../json-schema/generateDefaultValue";
 
 export type BodyState = {
   data: unknown;
@@ -60,13 +61,7 @@ const OpenApiOperationDisplay = ({
     () => operation.getRequestBodyMediaTypes(),
     [operation],
   );
-
-  const jsonFormsContext = useContext(JsonFormsContext);
-  const cells = useMemo(() => jsonFormsContext.cells ?? [], [jsonFormsContext]);
-  const renderers = useMemo(
-    () => jsonFormsContext.renderers ?? [],
-    [jsonFormsContext],
-  );
+  const jsonFormsProps = useJsonFormsConfig();
 
   const [parametersState, setParameterState] = useReducer(
     (
@@ -85,6 +80,15 @@ const OpenApiOperationDisplay = ({
       [name]: { data, errors },
     }),
     {},
+    () =>
+      parameters
+        .map(({ name, schema }) => ({
+          [name]: {
+            data: schema ? generateDefaultValue(schema) : null,
+            errors: undefined,
+          },
+        }))
+        .reduce<ParametersState>((x, y) => ({ ...x, ...y }), {}),
   );
   const [bodyState, updateBodyState] = useReducer(
     (state: BodyState, { data, errors }: BodyState) => ({
@@ -93,7 +97,7 @@ const OpenApiOperationDisplay = ({
       errors,
     }),
     {
-      data: null,
+      data: requestBodySchema ? generateDefaultValue(requestBodySchema) : null,
       errors: undefined,
     },
   );
@@ -123,12 +127,11 @@ const OpenApiOperationDisplay = ({
                 </pre>*/}
               <JsonForms
                 key={parameter.name}
-                cells={cells}
+                {...jsonFormsProps}
                 data={parametersState[parameter.name]?.data}
                 onChange={({ data, errors }) => {
                   setParameterState({ data, errors, name: parameter.name });
                 }}
-                renderers={renderers}
                 schema={{
                   title: parameter.name,
                   description: parameter.description,
@@ -168,12 +171,11 @@ const OpenApiOperationDisplay = ({
             <></>
           )}
           <JsonForms
-            cells={cells}
+            {...jsonFormsProps}
             data={bodyState.data}
             onChange={({ data, errors }) => {
               updateBodyState({ data, errors });
             }}
-            renderers={renderers}
             schema={requestBodySchema}
           />
         </>
