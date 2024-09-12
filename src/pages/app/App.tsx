@@ -22,18 +22,16 @@ import { JsonFormsRendererRegistryEntry } from "@jsonforms/core";
 import PatternPropertiesRenderer, {
   patternPropertiesControlTester,
 } from "../../forms/PatternPropertiesRenderer";
+import Headers from "../../components/Headers";
 
-function removeIdsFromSchema(schema: any) {
+function removeIdsFromSchema(schema: unknown) {
   if (Array.isArray(schema)) {
-    // If the schema is an array, process each item
     schema.forEach(removeIdsFromSchema);
   } else if (typeof schema === "object" && schema !== null) {
-    // If the schema is an object, check for the $id field and delete it
-    delete schema.$id;
+    if ("$id" in schema) delete schema.$id;
 
-    // Recursively process properties and items if they exist
     Object.keys(schema).forEach((key) => {
-      removeIdsFromSchema(schema[key]);
+      removeIdsFromSchema(schema[key as keyof typeof schema]);
     });
   }
 }
@@ -89,9 +87,12 @@ const App = () => {
   const [schema, setSchema] = useState<string | null>(null);
   const [schemaNormalized, setSchemaNormalized] = useState<string | null>(null);
   const [oas, setOas] = useState<Oas | null>(null);
+  const [globalHeaders, setGlobalHeaders] = useState<Record<string, string>>(
+    {},
+  );
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       if (!schema) return;
 
       const normalizedOasDocument = await new OASNormalize(schema, {})
@@ -106,13 +107,11 @@ const App = () => {
     })();
   }, [schema, setSchemaNormalized]);
   useEffect(() => {
-    (async () => {
-      if (!schemaNormalized) return;
+    if (!schemaNormalized) return;
 
-      const newOas = new Oas(schemaNormalized);
-      console.log(newOas);
-      setOas(newOas);
-    })();
+    const newOas = new Oas(schemaNormalized);
+    console.log(newOas);
+    setOas(newOas);
   }, [schemaNormalized, setOas]);
   const ajv = useMemo(() => {
     const a = new Ajv({
@@ -144,7 +143,7 @@ const App = () => {
         .forEach((parameter) => {
           path = path.replace(
             `{${parameter.name}}`,
-            `${parametersState[parameter.name].data}`,
+            String(parametersState[parameter.name].data),
           );
         });
 
@@ -155,7 +154,7 @@ const App = () => {
         .forEach((parameter) => {
           url.searchParams.set(
             parameter.name,
-            `${parametersState[parameter.name].data}`,
+            String(parametersState[parameter.name].data),
           );
         });
 
@@ -164,7 +163,9 @@ const App = () => {
         .getParameters()
         .filter((parameter) => parameter.in === "header")
         .forEach((parameter) => {
-          headers[parameter.name] = `${parametersState[parameter.name].data}`;
+          headers[parameter.name] = String(
+            parametersState[parameter.name].data,
+          );
         });
       const contentType = options.contentType;
       if (contentType) {
@@ -198,17 +199,19 @@ const App = () => {
         }
       }
 
-      const response = await fetch(url, {
+      const responseText = await fetch(url, {
         method: operation.method,
         body: serializedBody,
         headers: {
+          ...globalHeaders,
           ...headers,
         },
-      }).then((response) => response.json());
-      // TODO: Support deserialization of more content-types
-      console.log(response);
+      }).then((response) => response.text());
+      // TODO: Display the response text,
+      //  and try to determine the response type from the Content-Type header or the text content to syntax highlight it
+      console.log(responseText);
     },
-    [targetServer],
+    [globalHeaders, targetServer],
   );
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(
     null,
@@ -228,7 +231,7 @@ const App = () => {
           },
         }}
       >
-        <h1>My App</h1>
+        <h1>OpenAPI Forms UI</h1>
         {!schema ? (
           <>
             <OpenApiSchemaInput onSchemaChange={setSchema} />
@@ -238,6 +241,7 @@ const App = () => {
             <button
               onClick={() => {
                 setSchema(null);
+                setSchemaNormalized(null);
                 setOas(null);
                 setSelectedOperation(null);
               }}
@@ -251,6 +255,17 @@ const App = () => {
             <ServerSelector
               availableServers={oas.api.servers?.map(({ url }) => url) ?? []}
               onServerChange={(server) => setTargetServer(server)}
+            />
+
+            <h3>Custom headers</h3>
+            <p>
+              These headers will be sent with any request. Their values may be
+              overriden per-request if the request specifies a header parameter
+              with the same name.
+            </p>
+            <Headers
+              headers={globalHeaders}
+              onChange={(headers) => setGlobalHeaders(headers)}
             />
 
             <h3>Available Operations</h3>
