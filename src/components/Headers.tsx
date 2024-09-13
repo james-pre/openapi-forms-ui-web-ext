@@ -1,11 +1,74 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useId } from "react";
 
 export type HeadersProps = {
   headers?: Record<string, string>;
   onChange?: (headers: Record<string, string>) => void;
 };
 
+const httpRequestHeaderNames = [
+  "A-IM",
+  "Accept",
+  "Accept-Charset",
+  "Accept-Datetime",
+  "Accept-Encoding",
+  "Accept-Language",
+  "Access-Control-Request-Method",
+  "Access-Control-Request-Headers",
+  "Authorization",
+  "Cache-Control",
+  "Connection",
+  "Content-Encoding",
+  "Content-Length",
+  "Content-MD5",
+  "Content-Type",
+  "Cookie",
+  "Date",
+  "Expect",
+  "Forwarded",
+  "From",
+  "Host",
+  "HTTP2-Settings",
+  "If-Match",
+  "If-Modified-Since",
+  "If-None-Match",
+  "If-Range",
+  "If-Unmodified-Since",
+  "Max-Forwards",
+  "Origin",
+  "Pragma",
+  "Prefer",
+  "Proxy-Authorization",
+  "Range",
+  "Referer",
+  "TE",
+  "Trailer",
+  "Transfer-Encoding",
+  "User-Agent",
+  "Upgrade",
+  "Via",
+  "Warning",
+  "Upgrade-Insecure-Requests",
+  "X-Requested-With",
+  "DNT",
+  "X-Forwarded-For",
+  "X-Forwarded-Host",
+  "X-Forwarded-Proto",
+  "Front-End-Https",
+  "X-Http-Method-Override",
+  "X-ATT-DeviceId",
+  "X-Wap-Profile",
+  "Proxy-Connection",
+  "X-UIDH",
+  "X-Csrf-Token",
+  "X-Request-ID",
+  "X-Correlation-ID",
+  "Save-Data",
+  "Sec-GPC",
+].sort();
+
 const Headers = ({ headers = {}, onChange }: HeadersProps) => {
+  const datalistId = useId();
+
   const [localHeaders, setLocalHeaders] = useState(headers);
 
   useEffect(() => {
@@ -49,6 +112,11 @@ const Headers = ({ headers = {}, onChange }: HeadersProps) => {
 
   return (
     <div>
+      <datalist id={datalistId}>
+        {httpRequestHeaderNames.map((header) => (
+          <option key={header} value={header} />
+        ))}
+      </datalist>
       {Object.entries(localHeaders).map(([key, value], index) => (
         <div key={index}>
           <label>
@@ -56,6 +124,7 @@ const Headers = ({ headers = {}, onChange }: HeadersProps) => {
             <input
               type="text"
               value={key}
+              list={datalistId}
               onChange={(e) => handleKeyChange(e.target.value, key, value)}
             />
           </label>

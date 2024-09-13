@@ -87,9 +87,9 @@ const App = () => {
   const [schema, setSchema] = useState<string | null>(null);
   const [schemaNormalized, setSchemaNormalized] = useState<string | null>(null);
   const [oas, setOas] = useState<Oas | null>(null);
-  const [globalHeaders, setGlobalHeaders] = useState<Record<string, string>>(
-    {},
-  );
+  const [userDefinedHeaders, setUserDefinedHeaders] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     void (async () => {
@@ -203,7 +203,7 @@ const App = () => {
         method: operation.method,
         body: serializedBody,
         headers: {
-          ...globalHeaders,
+          ...userDefinedHeaders,
           ...headers,
         },
       }).then((response) => response.text());
@@ -211,7 +211,7 @@ const App = () => {
       //  and try to determine the response type from the Content-Type header or the text content to syntax highlight it
       console.log(responseText);
     },
-    [globalHeaders, targetServer],
+    [userDefinedHeaders, targetServer],
   );
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(
     null,
@@ -264,8 +264,8 @@ const App = () => {
               with the same name.
             </p>
             <Headers
-              headers={globalHeaders}
-              onChange={(headers) => setGlobalHeaders(headers)}
+              headers={userDefinedHeaders}
+              onChange={(headers) => setUserDefinedHeaders(headers)}
             />
 
             <h3>Available Operations</h3>
