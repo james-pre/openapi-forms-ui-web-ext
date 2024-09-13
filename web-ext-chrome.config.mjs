@@ -1,5 +1,6 @@
 import { configDotenv } from "dotenv";
 import path from "node:path";
+import os from "node:os";
 
 configDotenv();
 const chromePath = path.resolve(process.env.CHROME_PATH || getChromePath());
@@ -19,6 +20,10 @@ export default {
   run: {
     target: ["chromium"],
     chromiumBinary: chromePath,
+    chromiumProfile: path.join(
+      os.homedir(),
+      ".web-ext-chrome-openapi-forms-ui",
+    ),
     args: ["--disable-search-engine-choice-screen"],
     pref: ["extensions.ui.developer_mode=true"],
   },

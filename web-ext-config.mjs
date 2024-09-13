@@ -7,5 +7,7 @@ export default {
   },
   run: {
     devtools: true,
+    profileCreateIfMissing: true,
+    keepProfileChanges: true,
   },
 };
