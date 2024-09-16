@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ControlProps, rankWith } from "@jsonforms/core";
 import { JsonForms, withJsonFormsControlProps } from "@jsonforms/react";
 import { useJsonFormsConfig } from "../hooks/useJsonFormsConfig.hook";
 import { generateDefaultValue } from "../json-schema/generateDefaultValue";
+import { unescapeRegexSource } from "../utils/regex";
 
 const PatternPropertiesRenderer = (
   props: ControlProps & { data: Record<string, unknown> },
@@ -62,12 +63,13 @@ const PatternPropertiesRenderer = (
       setError(`The key "${newKey}" already exists.`);
       return;
     }
+
     const schema = patternProps[selectedPattern];
+    const newValue = generateDefaultValue(schema);
 
     setError("");
-    handleChange(path, { ...data, [newKey]: generateDefaultValue(schema) });
+    handleChange(path, { ...data, [newKey]: newValue });
     setNewKey("");
-    setSelectedPattern(null!);
   }, [
     data,
     handleChange,
@@ -92,23 +94,27 @@ const PatternPropertiesRenderer = (
 
   // Render input fields using JSONForms
   const renderInputField = useCallback(
-    (key: string, value: unknown, pattern: RegExp) => {
-      const propertySchema = patternProps[pattern.source] || {
-        type: typeof value,
-      };
+    (key: string) => {
+      const value = data[key];
+      const pattern = keyPatternMap[key];
+      const patternSourceUnescaped = unescapeRegexSource(pattern);
+      const propertySchema = patternProps[patternSourceUnescaped];
+
       return (
         <JsonForms
           {...jsonFormsProps}
           data={value}
           onChange={(state) => {
-            const data = state.data as Record<string, unknown>;
-            handleChange(path, { ...data, [key]: data });
+            handleChange(path, {
+              ...data,
+              [key]: state.data as Record<string, unknown>,
+            });
           }}
           schema={propertySchema}
         />
       );
     },
-    [handleChange, jsonFormsProps, path, patternProps],
+    [data, handleChange, jsonFormsProps, keyPatternMap, path, patternProps],
   );
 
   return (
@@ -119,15 +125,6 @@ const PatternPropertiesRenderer = (
       {error && (
         <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>
       )}
-
-      {/* Existing keys */}
-      {Object.keys(data).map((key) => (
-        <div key={key} style={{ marginBottom: "10px" }}>
-          <label>{key}</label>
-          {renderInputField(key, data[key], keyPatternMap[key])}
-          <button onClick={() => handleRemovePair(key)}>Remove</button>
-        </div>
-      ))}
 
       {/* Add new key */}
       <div>
@@ -157,6 +154,15 @@ const PatternPropertiesRenderer = (
         )}
         <button onClick={handleAddKey}>Add key</button>
       </div>
+
+      {/* Existing keys */}
+      {Object.keys(data).map((key) => (
+        <div key={key} style={{ marginBottom: "10px" }}>
+          <label>{key}</label>
+          {renderInputField(key)}
+          <button onClick={() => handleRemovePair(key)}>Remove</button>
+        </div>
+      ))}
     </div>
   );
 };
