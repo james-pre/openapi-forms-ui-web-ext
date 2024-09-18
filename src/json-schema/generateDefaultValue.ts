@@ -1,6 +1,9 @@
 import { JSONSchema } from "./JSONSchema";
 
 export function generateDefaultValue(schema: JSONSchema): unknown {
+  if (schema.const !== undefined) {
+    return schema.const;
+  }
   if (schema.default !== undefined) {
     return schema.default;
   }

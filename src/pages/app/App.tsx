@@ -24,7 +24,7 @@ import PatternPropertiesRenderer, {
 } from "../../forms/PatternPropertiesRenderer";
 import Headers from "../../components/Headers";
 
-function removeIdsFromSchema(schema: unknown) {
+const removeIdsFromSchema = (schema: unknown) => {
   if (Array.isArray(schema)) {
     schema.forEach(removeIdsFromSchema);
   } else if (typeof schema === "object" && schema !== null) {
@@ -34,7 +34,11 @@ function removeIdsFromSchema(schema: unknown) {
       removeIdsFromSchema(schema[key as keyof typeof schema]);
     });
   }
-}
+};
+
+const fixupSchema = (schema: unknown) => {
+  removeIdsFromSchema(schema);
+};
 
 const App = () => {
   const renderers = useMemo(
@@ -100,7 +104,7 @@ const App = () => {
           convertToLatest: true,
         })
         .then((definition) => new OASNormalize(definition).deref());
-      removeIdsFromSchema(normalizedOasDocument);
+      fixupSchema(normalizedOasDocument);
 
       console.log("Normalized OAS Document", normalizedOasDocument);
       setSchemaNormalized(JSON.stringify(normalizedOasDocument));
@@ -216,6 +220,9 @@ const App = () => {
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(
     null,
   );
+  useEffect(() => {
+    console.log("cells", cells);
+  }, [cells]);
 
   return (
     <>
@@ -293,6 +300,7 @@ const App = () => {
                       summary={selectedOperation.getSummary()}
                     />
                     <OpenApiOperationDisplay
+                      key={selectedOperation.getOperationId()}
                       operation={selectedOperation}
                       onExecute={(bodyState, parametersState, options) =>
                         void sendRequest(
