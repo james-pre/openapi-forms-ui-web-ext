@@ -10,8 +10,10 @@ export default tsEslint.config(
   pluginJs.configs.recommended,
   ...tsEslint.configs.recommendedTypeChecked,
   { ...pluginReact.configs.flat.recommended },
-  { plugins: { "react-hooks": fixupPluginRules(pluginReactHooks) } },
-  { rules: { ...pluginReactHooks.configs.recommended.rules } },
+  {
+    plugins: { "react-hooks": fixupPluginRules(pluginReactHooks) },
+    rules: { ...pluginReactHooks.configs.recommended.rules },
+  },
   { ...pluginEslintPrettier },
   {
     // files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
@@ -21,6 +23,12 @@ export default tsEslint.config(
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "react/prop-types": "off",
     },
   },
 );

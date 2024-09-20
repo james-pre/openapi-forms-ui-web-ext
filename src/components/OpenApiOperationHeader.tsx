@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { HttpMethods } from "oas/types";
-import styled from "styled-components";
+import styled from "@emotion/styled";
 
 export interface OpenApiOperationHeaderProps {
   method: string;

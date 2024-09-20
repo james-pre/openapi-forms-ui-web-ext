@@ -2,7 +2,7 @@
 import webpack, { Configuration } from "webpack";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
-import { createTransformer as createStyledComponentsTransformer } from "typescript-plugin-styled-components";
+import { TsconfigPathsPlugin } from "tsconfig-paths-webpack-plugin";
 
 const outputDirectory = path.resolve(import.meta.dirname, "dist/");
 
@@ -22,21 +22,21 @@ const configuration: Configuration = {
         loader: "ts-loader",
         options: {
           getCustomTransformers: () => ({
-            before: [createStyledComponentsTransformer({})],
+            before: [],
           }),
         },
       },
       {
-        test: /\.css|\.sass$/,
+        test: /\.css$/,
         use: [
           { loader: "style-loader" },
           {
             loader: "css-loader",
             options: {
-              modules: true,
+              importLoaders: 1,
             },
           },
-          { loader: "sass-loader" },
+          { loader: "postcss-loader" },
         ],
       },
       /*{
@@ -99,6 +99,11 @@ const configuration: Configuration = {
       util: "util",
       url: "url",
     },
+    plugins: [
+      new TsconfigPathsPlugin({
+        configFile: path.resolve(import.meta.dirname, "tsconfig.json"),
+      }),
+    ],
   },
   target: ["web"],
 };

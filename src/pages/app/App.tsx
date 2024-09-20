@@ -6,7 +6,6 @@ import {
   materialCells,
   materialRenderers,
 } from "@jsonforms/material-renderers";
-import OASNormalize from "oas-normalize";
 import OpenApiOperationDisplay, {
   BodyState,
   ExecuteOperationOptions,
@@ -23,22 +22,9 @@ import PatternPropertiesRenderer, {
   patternPropertiesControlTester,
 } from "../../forms/PatternPropertiesRenderer";
 import Headers from "../../components/Headers";
-
-const removeIdsFromSchema = (schema: unknown) => {
-  if (Array.isArray(schema)) {
-    schema.forEach(removeIdsFromSchema);
-  } else if (typeof schema === "object" && schema !== null) {
-    if ("$id" in schema) delete schema.$id;
-
-    Object.keys(schema).forEach((key) => {
-      removeIdsFromSchema(schema[key as keyof typeof schema]);
-    });
-  }
-};
-
-const fixupSchema = (schema: unknown) => {
-  removeIdsFromSchema(schema);
-};
+import { CssBaseline, Stack, ThemeProvider } from "@mui/material";
+import AppBrandName from "@/components/AppBrandName";
+import { theme } from "@/theme";
 
 const App = () => {
   const renderers = useMemo(
@@ -88,35 +74,11 @@ const App = () => {
   );
   const cells = useMemo(() => materialCells, []);
 
-  const [schema, setSchema] = useState<string | null>(null);
-  const [schemaNormalized, setSchemaNormalized] = useState<string | null>(null);
   const [oas, setOas] = useState<Oas | null>(null);
   const [userDefinedHeaders, setUserDefinedHeaders] = useState<
     Record<string, string>
   >({});
 
-  useEffect(() => {
-    void (async () => {
-      if (!schema) return;
-
-      const normalizedOasDocument = await new OASNormalize(schema, {})
-        .validate({
-          convertToLatest: true,
-        })
-        .then((definition) => new OASNormalize(definition).deref());
-      fixupSchema(normalizedOasDocument);
-
-      console.log("Normalized OAS Document", normalizedOasDocument);
-      setSchemaNormalized(JSON.stringify(normalizedOasDocument));
-    })();
-  }, [schema, setSchemaNormalized]);
-  useEffect(() => {
-    if (!schemaNormalized) return;
-
-    const newOas = new Oas(schemaNormalized);
-    console.log(newOas);
-    setOas(newOas);
-  }, [schemaNormalized, setOas]);
   const ajv = useMemo(() => {
     const a = new Ajv({
       strict: "log",
@@ -220,112 +182,113 @@ const App = () => {
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(
     null,
   );
-  useEffect(() => {
-    console.log("cells", cells);
-  }, [cells]);
 
   return (
     <>
-      <JsonFormsContext.Provider
-        value={{
-          cells,
-          renderers,
-          core: {
-            ajv: ajv,
-            data: undefined!,
-            schema: undefined!,
-            uischema: undefined!,
-          },
-        }}
-      >
-        <h1>OpenAPI Forms UI</h1>
-        {!schema ? (
-          <>
-            <OpenApiSchemaInput onSchemaChange={setSchema} />
-          </>
-        ) : oas ? (
-          <>
-            <button
-              onClick={() => {
-                setSchema(null);
-                setSchemaNormalized(null);
-                setOas(null);
-                setSelectedOperation(null);
-              }}
-            >
-              Back to schema selection
-            </button>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <JsonFormsContext.Provider
+          value={{
+            cells,
+            renderers,
+            core: {
+              ajv: ajv,
+              data: undefined!,
+              schema: undefined!,
+              uischema: undefined!,
+            },
+          }}
+        >
+          {!oas ? (
+            <>
+              <Stack spacing={24}>
+                <Stack textAlign={"center"}>
+                  <AppBrandName />
+                </Stack>
 
-            <h2>{oas.api.info?.title}</h2>
+                <Stack alignSelf={"center"} className="md:w-1/2">
+                  <OpenApiSchemaInput onSchemaChange={setOas} />
+                </Stack>
+              </Stack>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  setOas(null);
+                  setSelectedOperation(null);
+                }}
+              >
+                Back to schema selection
+              </button>
 
-            <h3>Target Server</h3>
-            <ServerSelector
-              availableServers={oas.api.servers?.map(({ url }) => url) ?? []}
-              onServerChange={(server) => setTargetServer(server)}
-            />
+              <h2>{oas.api.info?.title}</h2>
 
-            <h3>Custom headers</h3>
-            <p>
-              These headers will be sent with any request. Their values may be
-              overriden per-request if the request specifies a header parameter
-              with the same name.
-            </p>
-            <Headers
-              headers={userDefinedHeaders}
-              onChange={(headers) => setUserDefinedHeaders(headers)}
-            />
+              <h3>Target Server</h3>
+              <ServerSelector
+                availableServers={oas.api.servers?.map(({ url }) => url) ?? []}
+                onServerChange={(server) => setTargetServer(server)}
+              />
 
-            <h3>Available Operations</h3>
-            <div style={{ display: "flex", flexDirection: "row" }}>
-              <div style={{ width: "30dvw" }}>
-                {Object.entries(oas.getPaths()).map(([path, pathInfo]) =>
-                  Object.entries(pathInfo).map(([method, operation]) => (
-                    <div key={path + " " + method}>
-                      <button
-                        role="button"
-                        onClick={() => setSelectedOperation(operation)}
-                      >
-                        {operation.getSummary()}
-                      </button>
-                    </div>
-                  )),
-                )}
+              <h3>Custom headers</h3>
+              <p>
+                These headers will be sent with any request. Their values may be
+                overriden per-request if the request specifies a header
+                parameter with the same name.
+              </p>
+              <Headers
+                headers={userDefinedHeaders}
+                onChange={(headers) => setUserDefinedHeaders(headers)}
+              />
+
+              <h3>Available Operations</h3>
+              <div style={{ display: "flex", flexDirection: "row" }}>
+                <div style={{ width: "30dvw" }}>
+                  {Object.entries(oas.getPaths()).map(([path, pathInfo]) =>
+                    Object.entries(pathInfo).map(([method, operation]) => (
+                      <div key={path + " " + method}>
+                        <button
+                          role="button"
+                          onClick={() => setSelectedOperation(operation)}
+                        >
+                          {operation.getSummary()}
+                        </button>
+                      </div>
+                    )),
+                  )}
+                </div>
+                <div style={{ flexGrow: 1 }}>
+                  {selectedOperation ? (
+                    <>
+                      <OpenApiOperationHeader
+                        method={selectedOperation.method}
+                        path={selectedOperation.path}
+                        summary={selectedOperation.getSummary()}
+                      />
+                      <OpenApiOperationDisplay
+                        key={selectedOperation.getOperationId()}
+                        operation={selectedOperation}
+                        onExecute={(bodyState, parametersState, options) =>
+                          void sendRequest(
+                            selectedOperation,
+                            bodyState,
+                            parametersState,
+                            options,
+                          )
+                        }
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <p>Select an operation from the sidebar</p>
+                    </>
+                  )}
+                </div>
               </div>
-              <div style={{ flexGrow: 1 }}>
-                {selectedOperation ? (
-                  <>
-                    <OpenApiOperationHeader
-                      method={selectedOperation.method}
-                      path={selectedOperation.path}
-                      summary={selectedOperation.getSummary()}
-                    />
-                    <OpenApiOperationDisplay
-                      key={selectedOperation.getOperationId()}
-                      operation={selectedOperation}
-                      onExecute={(bodyState, parametersState, options) =>
-                        void sendRequest(
-                          selectedOperation,
-                          bodyState,
-                          parametersState,
-                          options,
-                        )
-                      }
-                    />
-                  </>
-                ) : (
-                  <>
-                    <p>Select an operation from the sidebar</p>
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <p>Loading...</p>
-          </>
-        )}
-      </JsonFormsContext.Provider>
+            </>
+          )}
+        </JsonFormsContext.Provider>
+      </ThemeProvider>
     </>
   );
 };
