@@ -1,9 +1,12 @@
 import React from "react";
+import { Typography } from "@mui/material";
 
 const AppBrandName = () => {
   return (
     <>
-      <h1 className="text-4xl font-bold">OpenAPI Forms UI</h1>
+      <Typography variant={"h4"} fontWeight={"bold"} py={4}>
+        OpenAPI Forms UI
+      </Typography>
     </>
   );
 };

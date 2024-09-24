@@ -43,6 +43,10 @@ const configuration: Configuration = {
         test: /manifest\.json/,
         type: "asset/resource",
       },*/
+      /*{
+        test: /ace-builds.*\/worker-.*$/,
+        type: "asset/resource",
+      },*/
     ],
   },
   output: {
