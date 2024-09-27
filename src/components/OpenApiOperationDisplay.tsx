@@ -14,13 +14,26 @@ import { useJsonFormsConfig } from "@/hooks/useJsonFormsConfig.hook";
 import { JSONSchema } from "@/json-schema/JSONSchema";
 import { generateDefaultValue } from "@/json-schema/generateDefaultValue";
 import OpenApiOperationExamples from "./OpenApiOperationExamples";
-import useApiRequestConfig from "@/hooks/apiRequestConfig.hook";
+import useApiGlobalRequestConfig from "@/hooks/apiGlobalRequestConfig.hook";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
+import {
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from "@mui/material";
 
-import "react-ace";
 import highlight from "ace-builds/src-noconflict/ext-static_highlight.js";
 import { modesByName } from "ace-builds/src-noconflict/ext-modelist.js";
+import OpenApiOperationAuthorization from "@/components/OpenApiOperationAuthorization";
+import {
+  applyRequestOptionsFromAuthorizationValues,
+  AuthorizationValue,
+} from "@/utils/authorization";
 
 const supportedAceModes = Object.freeze(
   ["javascript", "json", "html", "markdown", "text", "xml"].map(
@@ -77,7 +90,7 @@ const OpenApiOperationDisplay = ({
     [operation],
   );
   const jsonFormsProps = useJsonFormsConfig();
-  const apiRequestConfig = useApiRequestConfig();
+  const apiGlobalRequestConfig = useApiGlobalRequestConfig();
 
   const parametersStateInitializer = useCallback(
     () =>
@@ -129,6 +142,10 @@ const OpenApiOperationDisplay = ({
   const [contentType, setContentType] = useState(() =>
     availableContentTypes.at(0),
   );
+  const [authorization, setAuthorization] = useState<AuthorizationValue>({
+    type: "none",
+  });
+
   const resetRequestState = useCallback(() => {
     Object.entries(parametersStateInitializer()).forEach(([name, state]) =>
       setParameterState({ name, ...state }),
@@ -139,7 +156,7 @@ const OpenApiOperationDisplay = ({
   const [mode, setMode] = useState(Mode.View);
 
   const sendRequest = useCallback(async () => {
-    const { targetServer, requestHeaders } = apiRequestConfig;
+    const { targetServer } = apiGlobalRequestConfig;
 
     let path = operation.path;
     operation
@@ -201,17 +218,25 @@ const OpenApiOperationDisplay = ({
       }
     }
 
-    return await fetch(url, {
+    const requestInit: RequestInit = {
       method: operation.method,
       body: serializedBody,
       headers: {
-        ...requestHeaders,
+        ...apiGlobalRequestConfig.requestHeaders,
         ...headers,
       },
-      credentials: apiRequestConfig.includeCredentials ? "include" : undefined,
-    });
+    };
+    const { url: finalUrl } = applyRequestOptionsFromAuthorizationValues(
+      url,
+      requestInit,
+      apiGlobalRequestConfig.authorization,
+      authorization,
+    );
+
+    return await fetch(finalUrl, requestInit);
   }, [
-    apiRequestConfig,
+    apiGlobalRequestConfig,
+    authorization,
     bodyState.data,
     contentType,
     operation,
@@ -293,13 +318,42 @@ const OpenApiOperationDisplay = ({
 
   return (
     <>
-      <p>{operation.getDescription()}</p>
+      {/*<Typography variant={"h6"}>{operation.getSummary()}</Typography>*/}
+
+      <Stack alignItems={"flex-start"} direction={"row"}>
+        <Stack flexGrow={1}>
+          <Typography variant={"body1"}>
+            {operation.getDescription()}
+          </Typography>
+        </Stack>
+        <Stack>
+          {mode === Mode.View && (
+            <Button
+              disableElevation={true}
+              onClick={() => setMode(Mode.TryIt)}
+              type={"button"}
+              variant={"outlined"}
+            >
+              Try&nbsp;It
+            </Button>
+          )}
+          {mode === Mode.TryIt && (
+            <Button
+              disableElevation={true}
+              onClick={() => setMode(Mode.View)}
+              type={"button"}
+              variant={"outlined"}
+            >
+              Cancel
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+
       {mode === Mode.View && (
         <>
-          <button type="button" onClick={() => setMode(Mode.TryIt)}>
-            Try It
-          </button>
           <OpenApiOperationExamples
+            operation={operation}
             onTryExample={(example) => {
               updateBodyState({
                 data: example.value,
@@ -307,16 +361,18 @@ const OpenApiOperationDisplay = ({
               });
               setMode(Mode.TryIt);
             }}
-            operation={operation}
           />
         </>
       )}
 
       {mode === Mode.TryIt && (
         <>
-          <button type="button" onClick={() => setMode(Mode.View)}>
-            Cancel
-          </button>
+          <OpenApiOperationAuthorization
+            key={operation.getOperationId()}
+            onAuthorizationChange={setAuthorization}
+            operation={operation}
+          />
+
           <p>Request Parameters</p>
           {parameters.length > 0 ? (
             parameters.map((parameter) => {

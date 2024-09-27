@@ -87,10 +87,33 @@ let theme = createTheme({
     common: {
       ...commonColors,
     },
+    text: {
+      primary: "#1E1E1E",
+    },
   },
   shape: {
     borderRadius: 4,
   },
+  typography: (palette) => ({
+    /*    h6: {
+      fontSize: "1.25rem",
+      fontWeight: 500,
+      lineHeight: 1.465,
+    },
+    body1: {
+      fontSize: "1rem",
+      fontWeight: 400,
+      lineHeight: 1.171875,
+    },
+    body2: {
+      fontSize: "0.875rem",
+      fontWeight: 400,
+      lineHeight: 1.025625,
+    },*/
+    subtitle2: {
+      color: palette.grey["400"],
+    },
+  }),
 });
 
 theme = createTheme(theme, {
@@ -155,23 +178,6 @@ theme = createTheme(theme, {
         }),
       },
     },
-  },
-  typography: {
-/*    h6: {
-      fontSize: "1.25rem",
-      fontWeight: 500,
-      lineHeight: 1.465,
-    },
-    body1: {
-      fontSize: "1rem",
-      fontWeight: 400,
-      lineHeight: 1.171875,
-    },
-    body2: {
-      fontSize: "0.875rem",
-      fontWeight: 400,
-      lineHeight: 1.025625,
-    },*/
   },
 } as CreateThemeOptions);
 

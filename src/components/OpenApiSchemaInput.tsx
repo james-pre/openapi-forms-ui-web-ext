@@ -4,8 +4,18 @@ import Oas from "oas";
 import SchemaInputFileUpload from "@/components/SchemaInputFileUpload";
 import SchemaInputUrl from "@/components/SchemaInputUrl";
 
+export type SchemaSource = {
+  name: string;
+  type: "file" | "url";
+};
+
+export type SchemaChangeEventArgs = {
+  schema: Oas;
+  source: SchemaSource;
+};
+
 export interface OpenApiSchemaInputProps {
-  onSchemaChange: (schema: Oas) => void;
+  onSchemaChange: (eventArgs: SchemaChangeEventArgs) => void;
 }
 
 const OpenApiSchemaInput = (props: OpenApiSchemaInputProps) => {
@@ -14,8 +24,14 @@ const OpenApiSchemaInput = (props: OpenApiSchemaInputProps) => {
   return (
     <Stack spacing={8}>
       <SchemaInputFileUpload
-        onSchemaLoaded={(oas) => {
-          onSchemaChange(oas);
+        onSchemaLoaded={(oas, originalFileName) => {
+          onSchemaChange({
+            schema: oas,
+            source: {
+              name: originalFileName,
+              type: "file",
+            },
+          });
         }}
       />
 
@@ -28,8 +44,8 @@ const OpenApiSchemaInput = (props: OpenApiSchemaInputProps) => {
       </Stack>
 
       <SchemaInputUrl
-        onSchemaLoaded={(oas) => {
-          onSchemaChange(oas);
+        onSchemaLoaded={(oas, url) => {
+          onSchemaChange({ schema: oas, source: { name: url, type: "url" } });
         }}
       />
     </Stack>

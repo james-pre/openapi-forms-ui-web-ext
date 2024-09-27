@@ -19,7 +19,7 @@ import chroma from "chroma-js";
 import { parseSchema } from "@/json-schema/parseSchema";
 
 export type SchemaInputFileUploadProps = {
-  onSchemaLoaded?: (schema: Oas) => void;
+  onSchemaLoaded?: (schema: Oas, originalFileName: string) => void;
 };
 
 const FileInputBorderedContainer = styled(Box)(({ theme }) => ({
@@ -81,7 +81,7 @@ const SchemaInputFileUpload = ({
       // Ensure the loading animation takes at least 500ms
       setTimeout(() => {
         setLoadingState(LoadingState.Success);
-        onSchemaLoaded?.(oas);
+        onSchemaLoaded?.(oas, file.name);
       }, 250);
     })();
   }, [file, onSchemaLoaded]);
@@ -293,9 +293,11 @@ const SchemaInputFileUpload = ({
                       </Typography>
                     </Box>
                     <Box>
-                      <Typography variant={"body2"}>
-                        <i className="">No file chosen.</i>
-                      </Typography>
+                      <FormLabel>
+                        <Typography variant={"body2"}>
+                          <i>No file chosen.</i>
+                        </Typography>
+                      </FormLabel>
                     </Box>
                   </Stack>
                 </Stack>

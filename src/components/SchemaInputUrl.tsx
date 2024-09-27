@@ -13,7 +13,7 @@ import { parseSchema } from "@/json-schema/parseSchema";
 
 export type SchemaInputUrlProps = {
   initialUrl?: string;
-  onSchemaLoaded?: (schema: Oas) => void;
+  onSchemaLoaded?: (schema: Oas, url: string) => void;
 };
 
 enum LoadingState {
@@ -65,7 +65,7 @@ const SchemaInputUrl = ({
     }
 
     setLoadingState(LoadingState.Success);
-    onSchemaLoaded?.(oas);
+    onSchemaLoaded?.(oas, url);
   }, [url, onSchemaLoaded]);
 
   return (
