@@ -6,7 +6,6 @@ import React, {
   useId,
   useMemo,
   useReducer,
-  useRef,
   useState,
 } from "react";
 import * as ajv from "ajv";
@@ -19,27 +18,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
   Button,
+  Divider,
   FormControl,
+  Grid2,
   InputLabel,
   MenuItem,
   Select,
   Stack,
   Typography,
 } from "@mui/material";
-
-import highlight from "ace-builds/src-noconflict/ext-static_highlight.js";
-import { modesByName } from "ace-builds/src-noconflict/ext-modelist.js";
 import OpenApiOperationAuthorization from "@/components/OpenApiOperationAuthorization";
 import {
   applyRequestOptionsFromAuthorizationValues,
   AuthorizationValue,
 } from "@/utils/authorization";
-
-const supportedAceModes = Object.freeze(
-  ["javascript", "json", "html", "markdown", "text", "xml"].map(
-    (mode) => modesByName[mode],
-  ),
-);
+import HelpIcon from "@/components/HelpIcon";
+import CodeDisplay from "@/components/CodeDisplay";
 
 enum Mode {
   View,
@@ -67,10 +61,6 @@ const OpenApiOperationDisplay = ({
   operation,
 }: OpenApiOperationDisplayProps) => {
   const contentTypeSelectId = useId();
-  const responseTextId = useId();
-  const responseTextElementRef = useRef<HTMLElement>(null!);
-  const responseTypeLabelId = useId();
-  const responseTypeSelectId = useId();
 
   const requestBody = useMemo(() => {
     let x = operation.getRequestBody();
@@ -153,7 +143,7 @@ const OpenApiOperationDisplay = ({
     updateBodyState(bodyStateInitializer());
   }, [bodyStateInitializer, parametersStateInitializer]);
 
-  const [mode, setMode] = useState(Mode.View);
+  const [mode, setMode] = useState(Mode.TryIt);
 
   const sendRequest = useCallback(async () => {
     const { targetServer } = apiGlobalRequestConfig;
@@ -226,14 +216,20 @@ const OpenApiOperationDisplay = ({
         ...headers,
       },
     };
-    const { url: finalUrl } = applyRequestOptionsFromAuthorizationValues(
+    const { url: requestUrl } = applyRequestOptionsFromAuthorizationValues(
       url,
       requestInit,
       apiGlobalRequestConfig.authorization,
       authorization,
     );
+    console.log("requestUrl", requestUrl);
+    console.log("request", requestInit);
 
-    return await fetch(finalUrl, requestInit);
+    const response = await fetch(requestUrl, requestInit);
+
+    console.log("response", response);
+
+    return { request: requestInit, requestUrl, response };
   }, [
     apiGlobalRequestConfig,
     authorization,
@@ -248,7 +244,7 @@ const OpenApiOperationDisplay = ({
   );
 
   const queryClient = useQueryClient();
-  const query = useQuery<Response | null>(
+  const query = useQuery(
     {
       queryKey: getQueryKey(),
       queryFn: sendRequest,
@@ -264,44 +260,63 @@ const OpenApiOperationDisplay = ({
     queryClient,
   );
   const { data: queryData, refetch: refetchQuery } = query;
-  const [aceMode, setAceMode] = useState("ace/mode/text");
-  const [responseText, setResponseText] = useState<string | null>(null);
+
+  const curlText = useMemo(() => {
+    if (!queryData)
+      return [
+        `curl -X '${operation.method.toUpperCase()}'`,
+        `'${apiGlobalRequestConfig.targetServer}${operation.path}'`,
+        `-H 'Accept: */*'`,
+      ].join(" \\\n\t");
+
+    return [
+      `curl -X '${queryData.request.method!.toUpperCase()}'`,
+      `'${queryData.requestUrl.href}'`,
+      `-H ${[...new Headers(queryData.request.headers)].map(([key, value]) => `'${key}: ${value}'`).join(" \\\n\t-H ")}`,
+    ].join(" \\\n\t");
+  }, [
+    apiGlobalRequestConfig.targetServer,
+    operation.method,
+    operation.path,
+    queryData,
+  ]);
+  const requestUrlText = useMemo(() => {
+    if (!queryData)
+      return `${apiGlobalRequestConfig.targetServer}${operation.path}`;
+
+    return queryData.requestUrl.href;
+  }, [apiGlobalRequestConfig.targetServer, operation.path, queryData]);
+  const requestBodyText = useMemo(() => {
+    if (!queryData) return "\n";
+
+    return (queryData.request.body as string) || "\n";
+  }, [queryData]);
+  const requestHeadersText = useMemo(() => {
+    if (!queryData) return "Accept: */*";
+
+    return [...new Headers(queryData.request.headers)]
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n");
+  }, [queryData]);
+
+  const [responseBodyText, setResponseBodyText] = useState("\n");
   useEffect(() => {
     void (async () => {
-      if (!queryData) return;
+      if (!queryData) {
+        setResponseBodyText("\n");
+        return;
+      }
 
-      setResponseText(await queryData.text());
+      setResponseBodyText(await queryData.response.text());
     })();
   }, [queryData]);
-  useEffect(() => {
-    setAceMode(() => {
-      const responseContentType = queryData?.headers.get("Content-Type");
-      if (!responseContentType) return "ace/mode/text";
+  const responseHeadersText = useMemo(() => {
+    if (!queryData) return "\n";
 
-      const mode =
-        {
-          "application/javascript": "javascript",
-          "application/json": "json",
-          "text/html": "html",
-          "text/markdown": "markdown",
-          "application/xml": "xml",
-        }[responseContentType] || "text";
-
-      return (
-        supportedAceModes.find(
-          (supportedAceMode) => supportedAceMode.name === mode,
-        )?.mode || "ace/mode/text"
-      );
-    });
+    return [...queryData.response.headers]
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n");
   }, [queryData]);
-  useEffect(() => {
-    if (responseText === null || !responseTextElementRef.current) return;
-
-    highlight(responseTextElementRef.current, {
-      mode: aceMode,
-      theme: "ace/theme/github",
-    });
-  }, [aceMode, responseText]);
 
   const onClearResponseClick = useCallback(async () => {
     await queryClient.setQueryData(getQueryKey(), null);
@@ -366,151 +381,211 @@ const OpenApiOperationDisplay = ({
       )}
 
       {mode === Mode.TryIt && (
-        <>
-          <OpenApiOperationAuthorization
-            key={operation.getOperationId()}
-            onAuthorizationChange={setAuthorization}
-            operation={operation}
-          />
-
-          <p>Request Parameters</p>
-          {parameters.length > 0 ? (
-            parameters.map((parameter) => {
-              return (
-                <>
-                  <JsonForms
-                    key={parameter.name}
-                    {...jsonFormsProps}
-                    data={parametersState[parameter.name]?.data}
-                    onChange={({ data, errors }) => {
-                      setParameterState({ data, errors, name: parameter.name });
-                    }}
-                    schema={{
-                      title: parameter.name,
-                      description: parameter.description,
-                      ...parameter.schema,
-                    }}
+        <Stack spacing={1}>
+          <Grid2 container={true} spacing={2}>
+            <Grid2 size={6}>
+              <Stack spacing={2}>
+                <Stack spacing={2}>
+                  <Stack direction={"row"} alignItems={"center"} spacing={1}>
+                    <Typography variant={"h6"}>Authorization</Typography>
+                    <HelpIcon
+                      tooltip={
+                        "This will take precedence over the global request authorization"
+                      }
+                    />
+                  </Stack>
+                  <OpenApiOperationAuthorization
+                    onAuthorizationChange={setAuthorization}
+                    operation={operation}
                   />
-                </>
-              );
-            })
-          ) : (
-            <>
-              <i>No request parameters</i>
-            </>
-          )}
+                </Stack>
 
-          <p>Request Body</p>
-          {requestBodySchema ? (
-            <>
-              {availableContentTypes.length > 0 ? (
-                <div>
-                  <label htmlFor={contentTypeSelectId}>Content Type</label>
-                  <select
-                    id={contentTypeSelectId}
-                    onChange={(e) => setContentType(e.target.value)}
-                    value={contentType}
-                  >
-                    {availableContentTypes.map((availableContentType) => (
-                      <option
-                        key={availableContentType}
-                        value={availableContentType}
+                <Stack spacing={2}>
+                  <Typography variant={"h6"} marginBottom={1}>
+                    Request Parameters
+                  </Typography>
+                  <Stack>
+                    {parameters.length > 0 ? (
+                      parameters.map((parameter) => {
+                        return (
+                          <Stack key={parameter.name}>
+                            <JsonForms
+                              {...jsonFormsProps}
+                              data={parametersState[parameter.name]?.data}
+                              onChange={({ data, errors }) => {
+                                setParameterState({
+                                  data,
+                                  errors,
+                                  name: parameter.name,
+                                });
+                              }}
+                              schema={{
+                                title: parameter.name,
+                                description: parameter.description,
+                                ...parameter.schema,
+                              }}
+                            />
+                          </Stack>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <i>No request parameters.</i>
+                      </>
+                    )}
+                  </Stack>
+                </Stack>
+
+                <Stack spacing={2}>
+                  <Typography variant={"h6"} marginBottom={1}>
+                    Request Body
+                  </Typography>
+                  <Stack>
+                    {requestBodySchema ? (
+                      <Stack spacing={1}>
+                        {availableContentTypes.length > 0 && (
+                          <Stack spacing={1}>
+                            <FormControl>
+                              <InputLabel htmlFor={contentTypeSelectId}>
+                                Content type
+                              </InputLabel>
+                              <Select
+                                variant={"outlined"}
+                                id={contentTypeSelectId}
+                                label={"Content type"}
+                                onChange={(e) => setContentType(e.target.value)}
+                                value={contentType}
+                              >
+                                {availableContentTypes.map(
+                                  (availableContentType) => (
+                                    <MenuItem
+                                      key={availableContentType}
+                                      value={availableContentType}
+                                    >
+                                      {availableContentType}
+                                    </MenuItem>
+                                  ),
+                                )}
+                              </Select>
+                            </FormControl>
+                            <Divider variant={"fullWidth"} />
+                          </Stack>
+                        )}
+                        <Stack>
+                          <JsonForms
+                            {...jsonFormsProps}
+                            data={bodyState.data}
+                            onChange={({ data, errors }) => {
+                              updateBodyState({ data, errors });
+                            }}
+                            schema={requestBodySchema}
+                          />
+                        </Stack>
+                      </Stack>
+                    ) : (
+                      <>
+                        <i>No request body.</i>
+                      </>
+                    )}
+                  </Stack>
+                </Stack>
+              </Stack>
+            </Grid2>
+            <Grid2 size={6}>
+              <Stack spacing={2}>
+                <Stack spacing={2}>
+                  <Typography variant={"h6"}>Request</Typography>
+
+                  <Stack spacing={2}>
+                    <Stack>
+                      <Typography variant={"body1"}>cURL</Typography>
+                      <CodeDisplay text={curlText} />
+                    </Stack>
+
+                    <Stack>
+                      <Typography variant={"body1"}>Request URL</Typography>
+                      <CodeDisplay text={requestUrlText} />
+                    </Stack>
+
+                    <Stack>
+                      <Typography variant={"body1"}>Request body</Typography>
+                      <CodeDisplay text={requestBodyText} />
+                    </Stack>
+
+                    <Stack>
+                      <Typography variant={"body1"}>Request headers</Typography>
+                      <CodeDisplay text={requestHeadersText} />
+                    </Stack>
+                  </Stack>
+                </Stack>
+                <Stack spacing={2}>
+                  <Typography variant={"h6"}>
+                    Response
+                    {query.data &&
+                      ` (HTTP ${query.data.response.status} ${query.data.response.statusText}`.trimEnd() +
+                        ")"}
+                  </Typography>
+
+                  <Stack spacing={2}>
+                    <Stack>
+                      <Typography variant={"body1"}>Response body</Typography>
+                      <CodeDisplay text={responseBodyText} />
+                    </Stack>
+
+                    <Stack>
+                      <Typography variant={"body1"}>
+                        Response headers
+                      </Typography>
+                      <CodeDisplay text={responseHeadersText} />
+                    </Stack>
+
+                    <Stack direction={"row"} justifyContent={"flex-end"}>
+                      <Button
+                        className={"uppercase"}
+                        variant={"outlined"}
+                        onClick={() => void onClearResponseClick()}
                       >
-                        {availableContentType}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <></>
-              )}
-              <JsonForms
-                {...jsonFormsProps}
-                data={bodyState.data}
-                onChange={({ data, errors }) => {
-                  updateBodyState({ data, errors });
-                }}
-                schema={requestBodySchema}
-              />
-            </>
-          ) : (
-            <>
-              <i>No request body</i>
-            </>
-          )}
-          <div>
-            <button type={"button"} onClick={resetRequestState}>
-              Reset
-            </button>
-          </div>
+                        Clear response
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </Grid2>
+          </Grid2>
 
-          <div>
-            <button onClick={() => void onClearResponseClick()}>
-              Clear Response
-            </button>
-            <button
-              onClick={() => void onExecuteClick()}
-              disabled={query.isFetching}
-            >
-              Execute
-            </button>
-          </div>
+          <Stack direction={"row"} spacing={2}>
+            <Box>
+              <Button
+                variant={"outlined"}
+                className={"uppercase"}
+                onClick={() => void resetRequestState()}
+              >
+                Clear parameters
+              </Button>
+            </Box>
+            <Box>
+              <Button
+                variant={"contained"}
+                className={"uppercase"}
+                disabled={query.isFetching}
+                disableElevation={true}
+                onClick={() => void onExecuteClick()}
+              >
+                Execute request
+              </Button>
+            </Box>
+          </Stack>
 
-          <p>Response</p>
-          {query.isPending ? (
-            <p>Executing...</p>
-          ) : query.isError ? (
-            <p>Error: {String(query.error)}</p>
-          ) : (
-            <>
-              {query.data === null ? (
-                <>Execute to view the response</>
-              ) : (
-                <>
-                  <p>{query.data.status}</p>
-                  {responseText !== null ? (
-                    <>
-                      <FormControl variant={"outlined"}>
-                        <InputLabel id={responseTypeLabelId}>
-                          Response Type
-                        </InputLabel>
-                        <Select
-                          id={responseTypeSelectId}
-                          label={"Response Type"}
-                          labelId={responseTypeLabelId}
-                          onChange={(e) => setAceMode(e.target.value)}
-                          variant={"outlined"}
-                          value={aceMode}
-                        >
-                          {supportedAceModes.map((supportedAceMode) => (
-                            <MenuItem
-                              key={supportedAceMode.name}
-                              value={supportedAceMode.mode}
-                            >
-                              {supportedAceMode.caption}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <Box
-                        key={aceMode}
-                        id={responseTextId}
-                        ref={responseTextElementRef}
-                        style={{
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {responseText}
-                      </Box>
-                    </>
-                  ) : (
-                    <p>Downloading response...</p>
-                  )}
-                </>
-              )}
-            </>
+          {query.isError && (
+            <Stack>
+              <Typography color={"error"}>
+                <Typography variant={"h6"}>Error</Typography>
+                <Typography>{String(query.error)}</Typography>
+              </Typography>
+            </Stack>
           )}
-        </>
+        </Stack>
       )}
     </>
   );

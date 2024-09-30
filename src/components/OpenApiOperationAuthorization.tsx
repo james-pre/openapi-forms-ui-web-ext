@@ -58,7 +58,7 @@ const OpenApiOperationAuthorization = ({
   return (
     <Stack spacing={1}>
       <Grid2 container={true} spacing={1}>
-        <Grid2 size={{ xs: 12, md: 2 }}>
+        <Grid2 size={{ xs: 12, md: 4 }}>
           <Stack>
             <FormControl>
               <FormLabel htmlFor={authorizationTypeId}>
@@ -87,7 +87,7 @@ const OpenApiOperationAuthorization = ({
             </FormControl>
           </Stack>
         </Grid2>
-        <Grid2 size={{ xs: 12, md: 10 }}>
+        <Grid2 size={{ xs: 12, md: 8 }}>
           <Stack>
             {authorizationValue.type === "api-key" && (
               <FormControl>
@@ -170,16 +170,7 @@ const OpenApiOperationAuthorization = ({
             )}
 
             {/* If the AuthorizationType is 'cookie', we pass `credentials: include` to the fetch call */}
-            {authorizationValue.type === "cookie" && (
-              <>
-                <Typography>
-                  Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                  Aliquam animi assumenda blanditiis doloremque dolorum ea earum
-                  error et impedit iste libero minima mollitia, nihil possimus
-                  sapiente sequi vel? Quibusdam, velit.
-                </Typography>
-              </>
-            )}
+            {authorizationValue.type === "cookie" && <></>}
 
             {authorizationValue.type === "header" && (
               <Grid2 container={true} spacing={1}>

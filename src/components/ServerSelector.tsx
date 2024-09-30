@@ -45,7 +45,7 @@ const ServerSelector = ({
       <Autocomplete
         id={autocompleteId}
         freeSolo={allowCustom}
-        onChange={(_event, value) => value && setServer(value)}
+        onInputChange={(_event, value) => setServer(value)}
         options={availableServers}
         renderInput={(params) => <TextField {...params} />}
         value={server}

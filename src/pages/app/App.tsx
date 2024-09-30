@@ -106,6 +106,12 @@ const App = () => {
     [],
   );
   const cells = useMemo(() => materialCells, []);
+  const initialUserDefinedHeaders: Record<string, string> = useMemo(
+    () => ({
+      Accept: "*/*",
+    }),
+    [],
+  );
 
   const [oas, setOas] = useState<Oas | null>(null);
   const [schemaSource, setSchemaSource] = useState<SchemaSource>(null!);
@@ -120,11 +126,9 @@ const App = () => {
   }, [oas]);
 
   const [targetServer, setTargetServer] = useState<string>("");
-  const [userDefinedHeaders, setUserDefinedHeaders] = useState<
-    Record<string, string>
-  >({
-    Accept: "*/*",
-  });
+  const [userDefinedHeaders, setUserDefinedHeaders] = useState(
+    initialUserDefinedHeaders,
+  );
   const [globalRequestAuthorization, setGlobalRequestAuthorization] =
     useState<AuthorizationValue>({ type: "none" });
 
@@ -180,6 +184,7 @@ const App = () => {
                       <AppBrandName />
                     </Stack>
 
+                    {/*TODO: Use the theme's breakpoint here instead of tailwind's */}
                     <Stack alignSelf={"center"} className="md:w-1/2">
                       <OpenApiSchemaInput
                         onSchemaChange={({ schema, source }) => {
@@ -285,7 +290,7 @@ const App = () => {
 
                       <HeadersComponent
                         initialHeaders={userDefinedHeaders}
-                        onChange={(headers) => setUserDefinedHeaders(headers)}
+                        onChange={setUserDefinedHeaders}
                       />
                     </Stack>
 
@@ -345,7 +350,7 @@ const App = () => {
                             variant={"outlined"}
                             slotProps={{
                               heading: { component: "h5" },
-                              transition: { unmountOnExit: true },
+                              transition: { unmountOnExit: false },
                             }}
                             sx={{
                               backgroundColor: "inherit",
