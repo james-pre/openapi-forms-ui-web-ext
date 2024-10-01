@@ -16,6 +16,8 @@ import OpenApiOperationExamples from "./OpenApiOperationExamples";
 import useApiGlobalRequestConfig from "@/hooks/apiGlobalRequestConfig.hook";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Alert,
+  AlertTitle,
   Box,
   Button,
   Divider,
@@ -34,6 +36,8 @@ import {
 } from "@/utils/authorization";
 import HelpIcon from "@/components/HelpIcon";
 import CodeDisplay from "@/components/CodeDisplay";
+import useAppConfig from "@/hooks/appConfig.hook";
+import { SupportedMediaType } from "@/utils/mediaTypeSerializer";
 
 enum Mode {
   View,
@@ -61,6 +65,7 @@ const OpenApiOperationDisplay = ({
   operation,
 }: OpenApiOperationDisplayProps) => {
   const contentTypeSelectId = useId();
+  const { mediaTypeSerializer } = useAppConfig();
 
   const requestBody = useMemo(() => {
     let x = operation.getRequestBody();
@@ -130,7 +135,7 @@ const OpenApiOperationDisplay = ({
     bodyStateInitializer,
   );
   const [contentType, setContentType] = useState(() =>
-    availableContentTypes.at(0),
+    mediaTypeSerializer.findFirstSupportedMediaType(availableContentTypes),
   );
   const [authorization, setAuthorization] = useState<AuthorizationValue>({
     type: "none",
@@ -188,24 +193,7 @@ const OpenApiOperationDisplay = ({
       operation.method !== "head" &&
       body !== undefined
     ) {
-      // TODO: Support serialization of more content-types
-      switch (contentType) {
-        case "application/json": {
-          serializedBody = JSON.stringify(body);
-          break;
-        }
-        case "application/xml": {
-          break;
-        }
-        case "application/x-www-form-urlencoded": {
-          break;
-        }
-        case "multipart/form-data": {
-          break;
-        }
-        default:
-          throw new Error(`Unknown content type ${contentType}`);
-      }
+      serializedBody = mediaTypeSerializer.serialize(body, contentType!);
     }
 
     const requestInit: RequestInit = {
@@ -235,6 +223,7 @@ const OpenApiOperationDisplay = ({
     authorization,
     bodyState.data,
     contentType,
+    mediaTypeSerializer,
     operation,
     parametersState,
   ]);
@@ -359,7 +348,7 @@ const OpenApiOperationDisplay = ({
               type={"button"}
               variant={"outlined"}
             >
-              Cancel
+              View&nbsp;examples
             </Button>
           )}
         </Stack>
@@ -453,13 +442,22 @@ const OpenApiOperationDisplay = ({
                                 variant={"outlined"}
                                 id={contentTypeSelectId}
                                 label={"Content type"}
-                                onChange={(e) => setContentType(e.target.value)}
+                                onChange={(e) =>
+                                  setContentType(
+                                    e.target.value as SupportedMediaType,
+                                  )
+                                }
                                 value={contentType}
                               >
                                 {availableContentTypes.map(
                                   (availableContentType) => (
                                     <MenuItem
                                       key={availableContentType}
+                                      disabled={
+                                        !mediaTypeSerializer.supports(
+                                          availableContentType,
+                                        )
+                                      }
                                       value={availableContentType}
                                     >
                                       {availableContentType}
@@ -554,6 +552,17 @@ const OpenApiOperationDisplay = ({
             </Grid2>
           </Grid2>
 
+          <Stack>
+            {query.isError && (
+              <Stack>
+                <Alert severity="error">
+                  <AlertTitle>Error</AlertTitle>
+                  {String(query.error)}
+                </Alert>
+              </Stack>
+            )}
+          </Stack>
+
           <Stack direction={"row"} spacing={2}>
             <Box>
               <Button
@@ -576,15 +585,6 @@ const OpenApiOperationDisplay = ({
               </Button>
             </Box>
           </Stack>
-
-          {query.isError && (
-            <Stack>
-              <Typography color={"error"}>
-                <Typography variant={"h6"}>Error</Typography>
-                <Typography>{String(query.error)}</Typography>
-              </Typography>
-            </Stack>
-          )}
         </Stack>
       )}
     </>

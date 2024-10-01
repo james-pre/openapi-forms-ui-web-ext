@@ -29,7 +29,7 @@ const SchemaInputUrl = ({
   const schemaUrlInputId = useId();
 
   const [url, setUrl] = useState(
-    () => initialUrl ?? "https://petstore.swagger.io/v2/swagger.json",
+    () => initialUrl ?? "https://petstore3.swagger.io/api/v3/openapi.json",
   );
   const [loadingState, setLoadingState] = useState<LoadingState | null>(null);
   const [error, setError] = useState<string | null>(null);

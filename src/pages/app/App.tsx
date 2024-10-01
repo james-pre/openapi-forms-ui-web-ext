@@ -46,7 +46,10 @@ import {
 } from "@mui/material";
 import AppBrandName from "@/components/AppBrandName";
 import { theme } from "@/theme";
-import { ApiGlobalRequestConfigContext } from "@/hooks/apiGlobalRequestConfig.hook";
+import {
+  ApiGlobalRequestConfig,
+  ApiGlobalRequestConfigContext,
+} from "@/hooks/apiGlobalRequestConfig.hook";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import HelpIcon from "@/components/HelpIcon";
@@ -56,6 +59,8 @@ import OpenApiOperationHeader from "@/components/OpenApiOperationHeader";
 import OpenApiOperationDisplay from "@/components/OpenApiOperationDisplay";
 import OpenApiOperationAuthorization from "@/components/OpenApiOperationAuthorization";
 import { AuthorizationValue } from "@/utils/authorization";
+import { MediaTypeSerializer } from "@/utils/mediaTypeSerializer";
+import { AppConfig, AppConfigContext } from "@/hooks/appConfig.hook";
 
 const queryClient = new QueryClient();
 
@@ -143,174 +148,199 @@ const App = () => {
 
     return a;
   }, []);
+  const mediaTypeSerializer = useMemo(() => new MediaTypeSerializer(), []);
+
   useEffect(() => {
     console.log("ajv", ajv);
   }, [ajv]);
+  useEffect(() => {
+    console.log("oas", oas);
+  }, [oas]);
+
+  const appConfig = useMemo(
+    () =>
+      ({
+        mediaTypeSerializer,
+      }) as AppConfig,
+    [mediaTypeSerializer],
+  );
+  const apiGlobalRequestConfig = useMemo(
+    () =>
+      ({
+        authorization: globalRequestAuthorization,
+        requestHeaders: userDefinedHeaders,
+        targetServer: targetServer,
+      }) as ApiGlobalRequestConfig,
+    [globalRequestAuthorization, userDefinedHeaders, targetServer],
+  );
+  const jsonFormsStateContext = useMemo(
+    () => ({
+      cells,
+      renderers,
+      core: {
+        ajv: ajv,
+        data: undefined!,
+        schema: undefined!,
+        uischema: undefined!,
+      },
+    }),
+    [ajv, cells, renderers],
+  );
 
   return (
     <>
-      <QueryClientProvider client={queryClient}>
-        <ReactQueryDevtools initialIsOpen={false} />
-        <ThemeProvider theme={theme}>
-          <ApiGlobalRequestConfigContext.Provider
-            value={{
-              authorization: globalRequestAuthorization,
-              requestHeaders: userDefinedHeaders,
-              targetServer: targetServer,
-            }}
-          >
-            <CssBaseline />
-            <JsonFormsContext.Provider
-              value={{
-                cells,
-                renderers,
-                core: {
-                  ajv: ajv,
-                  data: undefined!,
-                  schema: undefined!,
-                  uischema: undefined!,
-                },
-              }}
+      <AppConfigContext.Provider value={appConfig}>
+        <QueryClientProvider client={queryClient}>
+          <ReactQueryDevtools initialIsOpen={false} />
+          <ThemeProvider theme={theme}>
+            <ApiGlobalRequestConfigContext.Provider
+              value={apiGlobalRequestConfig}
             >
-              <Container
-                sx={(theme) => ({
-                  paddingTop: theme.spacing(4),
-                  paddingBottom: theme.spacing(4),
-                })}
-              >
-                {!oas ? (
-                  <Stack spacing={24}>
-                    <Stack textAlign={"center"}>
-                      <AppBrandName />
-                    </Stack>
-
-                    {/*TODO: Use the theme's breakpoint here instead of tailwind's */}
-                    <Stack alignSelf={"center"} className="md:w-1/2">
-                      <OpenApiSchemaInput
-                        onSchemaChange={({ schema, source }) => {
-                          setSchemaSource(source);
-                          setOas(schema);
-                        }}
-                      />
-                    </Stack>
-                  </Stack>
-                ) : (
-                  <Stack spacing={3}>
-                    <Stack direction={"row"} alignItems={"center"}>
-                      <Stack flexGrow={1} spacing={1}>
+              <CssBaseline />
+              <JsonFormsContext.Provider value={jsonFormsStateContext}>
+                <Container
+                  sx={(theme) => ({
+                    paddingTop: theme.spacing(4),
+                    paddingBottom: theme.spacing(4),
+                  })}
+                >
+                  {!oas ? (
+                    <Stack spacing={24}>
+                      <Stack textAlign={"center"}>
                         <AppBrandName />
-                        <Typography variant={"subtitle2"}>
-                          <Stack
-                            direction={"row"}
-                            spacing={1}
-                            alignItems={"baseline"}
-                          >
-                            <Typography>Current schema:</Typography>
-                            {schemaSource.type === "url" ? (
-                              <Link
-                                href={schemaSource.name}
-                                target={"_blank"}
-                                typography={"subtitle2"}
-                                underline={"hover"}
-                              >
-                                {schemaSource.name}
-                              </Link>
-                            ) : (
-                              <Typography>{schemaSource.name}</Typography>
-                            )}
-                          </Stack>
-                        </Typography>
                       </Stack>
-                      <Box>
-                        <Button
-                          className={"uppercase"}
-                          onClick={() => {
-                            setOas(null);
+
+                      <Stack
+                        alignSelf={"center"}
+                        sx={() => ({
+                          width: { xs: "100%", md: "50%" },
+                        })}
+                      >
+                        <OpenApiSchemaInput
+                          onSchemaChange={({ schema, source }) => {
+                            setSchemaSource(source);
+                            setOas(schema);
                           }}
-                          variant={"contained"}
-                        >
-                          Change schema
-                        </Button>
-                      </Box>
+                        />
+                      </Stack>
                     </Stack>
+                  ) : (
+                    <Stack spacing={3}>
+                      <Stack direction={"row"} alignItems={"center"}>
+                        <Stack flexGrow={1} spacing={1}>
+                          <AppBrandName />
+                          <Typography variant={"subtitle2"}>
+                            <Stack
+                              direction={"row"}
+                              spacing={1}
+                              alignItems={"baseline"}
+                            >
+                              <Typography>Current schema:</Typography>
+                              {schemaSource.type === "url" ? (
+                                <Link
+                                  href={schemaSource.name}
+                                  target={"_blank"}
+                                  typography={"subtitle2"}
+                                  underline={"hover"}
+                                >
+                                  {schemaSource.name}
+                                </Link>
+                              ) : (
+                                <Typography>{schemaSource.name}</Typography>
+                              )}
+                            </Stack>
+                          </Typography>
+                        </Stack>
+                        <Box>
+                          <Button
+                            className={"uppercase"}
+                            onClick={() => {
+                              setOas(null);
+                            }}
+                            variant={"contained"}
+                          >
+                            Change schema
+                          </Button>
+                        </Box>
+                      </Stack>
 
-                    <Stack>
-                      <Typography variant={"h5"}>
-                        {oas.api.info.title}
-                      </Typography>
-                    </Stack>
-
-                    <Stack
-                      sx={(theme) => ({
-                        maxWidth: theme.breakpoints.values.sm,
-                      })}
-                    >
-                      <ServerSelector
-                        availableServers={
-                          oas.api.servers?.map(({ url }) => url) ?? []
-                        }
-                        onServerChange={(server) => setTargetServer(server)}
-                      />
-                    </Stack>
-
-                    <Stack>
-                      <Stack
-                        direction={"row"}
-                        alignItems={"center"}
-                        spacing={1}
-                      >
+                      <Stack>
                         <Typography variant={"h5"}>
-                          Global Request Configuration
+                          {oas.api.info.title}
                         </Typography>
-                        <HelpIcon
-                          tooltip={
-                            "These configurations apply to any requests. " +
-                            "You may override some or all of these properties on a per-request basis under each individual request."
-                          }
-                        />
                       </Stack>
-                    </Stack>
 
-                    <Stack spacing={1}>
                       <Stack
-                        direction={"row"}
-                        alignItems={"center"}
-                        spacing={1}
+                        sx={(theme) => ({
+                          maxWidth: theme.breakpoints.values.sm,
+                        })}
                       >
-                        <Typography variant={"h6"}>
-                          Global Request Headers
-                        </Typography>
-                        <HelpIcon
-                          tooltip={
-                            "A header value may be overriden per-request if the " +
-                            "request specifies a header parameter with the same name."
+                        <ServerSelector
+                          availableServers={
+                            oas.api.servers?.map(({ url }) => url) ?? []
                           }
+                          onServerChange={(server) => setTargetServer(server)}
                         />
                       </Stack>
 
-                      <HeadersComponent
-                        initialHeaders={userDefinedHeaders}
-                        onChange={setUserDefinedHeaders}
-                      />
-                    </Stack>
-
-                    <Stack>
-                      <Stack
-                        direction={"row"}
-                        alignItems={"center"}
-                        spacing={1}
-                      >
-                        <Typography variant={"h6"}>
-                          Global Request Authorization
-                        </Typography>
-                        {/*<HelpIcon />*/}
+                      <Stack>
+                        <Stack
+                          direction={"row"}
+                          alignItems={"center"}
+                          spacing={1}
+                        >
+                          <Typography variant={"h5"}>
+                            Global Request Configuration
+                          </Typography>
+                          <HelpIcon
+                            tooltip={
+                              "These configurations apply to any requests. " +
+                              "You may override some or all of these properties on a per-request basis under each individual request."
+                            }
+                          />
+                        </Stack>
                       </Stack>
 
-                      <OpenApiOperationAuthorization
-                        onAuthorizationChange={setGlobalRequestAuthorization}
-                        operation={null!}
-                      />
-                      {/*<Typography variant={"h6"}>Credentials</Typography>
+                      <Stack spacing={1}>
+                        <Stack
+                          direction={"row"}
+                          alignItems={"center"}
+                          spacing={1}
+                        >
+                          <Typography variant={"h6"}>
+                            Global Request Headers
+                          </Typography>
+                          <HelpIcon
+                            tooltip={
+                              "A header value may be overriden per-request if the " +
+                              "request specifies a header parameter with the same name."
+                            }
+                          />
+                        </Stack>
+
+                        <HeadersComponent
+                          initialHeaders={userDefinedHeaders}
+                          onChange={setUserDefinedHeaders}
+                        />
+                      </Stack>
+
+                      <Stack>
+                        <Stack
+                          direction={"row"}
+                          alignItems={"center"}
+                          spacing={1}
+                        >
+                          <Typography variant={"h6"}>
+                            Global Request Authorization
+                          </Typography>
+                          {/*<HelpIcon />*/}
+                        </Stack>
+
+                        <OpenApiOperationAuthorization
+                          onAuthorizationChange={setGlobalRequestAuthorization}
+                          operation={null!}
+                        />
+                        {/*<Typography variant={"h6"}>Credentials</Typography>
                       <Stack
                         direction={"row"}
                         alignItems={"center"}
@@ -340,81 +370,81 @@ const App = () => {
                           }
                         />
                       </Stack>*/}
-                    </Stack>
+                      </Stack>
 
-                    <Stack spacing={0}>
-                      {Object.entries(groupedOperations).map(
-                        ([categoryName, operations]) => (
-                          <Accordion
-                            key={categoryName}
-                            variant={"outlined"}
-                            slotProps={{
-                              heading: { component: "h5" },
-                              transition: { unmountOnExit: false },
-                            }}
-                            sx={{
-                              backgroundColor: "inherit",
-                              borderLeft: 0,
-                              borderRight: 0,
-                              borderTop: 0,
-                              borderRadius: 0,
-                              "::before": {
-                                display: "none",
-                              },
-                            }}
-                          >
-                            <AccordionSummary
-                              expandIcon={<ExpandMore />}
+                      <Stack spacing={0}>
+                        {Object.entries(groupedOperations).map(
+                          ([categoryName, operations]) => (
+                            <Accordion
+                              key={categoryName}
+                              variant={"outlined"}
+                              slotProps={{
+                                heading: { component: "h5" },
+                                transition: { unmountOnExit: false },
+                              }}
                               sx={{
-                                // ":hover:not(.Mui-expanded)": {
-                                ":hover": {
-                                  backgroundColor: theme.palette.action.hover,
+                                backgroundColor: "inherit",
+                                borderLeft: 0,
+                                borderRight: 0,
+                                borderTop: 0,
+                                borderRadius: 0,
+                                "::before": {
+                                  display: "none",
                                 },
                               }}
                             >
-                              <Typography variant={"h5"}>
-                                {categoryName}
-                              </Typography>
-                            </AccordionSummary>
-                            <AccordionDetails>
-                              <Stack spacing={1}>
-                                {operations.map((operation) => (
-                                  <Accordion
-                                    key={operation.getOperationId()}
-                                    variant={"outlined"}
-                                    slotProps={{
-                                      heading: { component: "div" },
-                                      transition: { unmountOnExit: false },
-                                    }}
-                                    sx={{
-                                      "::before": {
-                                        display: "none",
-                                      },
-                                    }}
-                                  >
-                                    <AccordionSummary
-                                      expandIcon={<ExpandMore />}
+                              <AccordionSummary
+                                expandIcon={<ExpandMore />}
+                                sx={{
+                                  // ":hover:not(.Mui-expanded)": {
+                                  ":hover": {
+                                    backgroundColor: theme.palette.action.hover,
+                                  },
+                                }}
+                              >
+                                <Typography variant={"h5"}>
+                                  {categoryName}
+                                </Typography>
+                              </AccordionSummary>
+                              <AccordionDetails>
+                                <Stack spacing={1}>
+                                  {operations.map((operation) => (
+                                    <Accordion
+                                      key={operation.getOperationId()}
+                                      variant={"outlined"}
+                                      slotProps={{
+                                        heading: { component: "div" },
+                                        transition: { unmountOnExit: false },
+                                      }}
+                                      sx={{
+                                        "::before": {
+                                          display: "none",
+                                        },
+                                      }}
                                     >
-                                      <OpenApiOperationHeader
-                                        method={operation.method}
-                                        path={operation.path}
-                                      />
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                      <OpenApiOperationDisplay
-                                        operation={operation}
-                                      />
-                                    </AccordionDetails>
-                                  </Accordion>
-                                ))}
-                              </Stack>
-                            </AccordionDetails>
-                          </Accordion>
-                        ),
-                      )}
-                    </Stack>
+                                      <AccordionSummary
+                                        expandIcon={<ExpandMore />}
+                                      >
+                                        <OpenApiOperationHeader
+                                          method={operation.method}
+                                          path={operation.path}
+                                        />
+                                      </AccordionSummary>
+                                      <AccordionDetails>
+                                        <OpenApiOperationDisplay
+                                          operation={operation}
+                                        />
+                                      </AccordionDetails>
+                                    </Accordion>
+                                  ))}
+                                </Stack>
+                              </AccordionDetails>
+                            </Accordion>
+                          ),
+                        )}
+                      </Stack>
 
-                    {/*<div style={{ display: "flex", flexDirection: "row" }}>
+                      {/*<div style={{ display: "flex", flexDirection: "row" }}>
                       <div style={{ width: "30dvw" }}>
                         {Object.entries(oas.getPaths()).map(
                           ([path, pathInfo]) =>
@@ -454,13 +484,14 @@ const App = () => {
                         )}
                       </div>
                     </div>*/}
-                  </Stack>
-                )}
-              </Container>
-            </JsonFormsContext.Provider>
-          </ApiGlobalRequestConfigContext.Provider>
-        </ThemeProvider>
-      </QueryClientProvider>
+                    </Stack>
+                  )}
+                </Container>
+              </JsonFormsContext.Provider>
+            </ApiGlobalRequestConfigContext.Provider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </AppConfigContext.Provider>
     </>
   );
 };

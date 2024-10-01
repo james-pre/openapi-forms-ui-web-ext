@@ -97,6 +97,7 @@ export const applyRequestOptionsFromAuthorizationValues = (
   };
 
   const applyHeaders = () => {
+    // TODO: set headers to a new Headers object, that way we make sure we don't add invalid headers (like the empty string "" for example)
     if (requestInit.headers instanceof Headers) {
       for (const [key, value] of Object.entries(headers)) {
         requestInit.headers.set(key, value);

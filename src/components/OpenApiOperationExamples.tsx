@@ -1,6 +1,19 @@
 import React, { useEffect, useId, useMemo, useState } from "react";
 import { Operation } from "oas/operation";
-import { MediaTypeExample } from "../json-schema/MediaTypeExample";
+import { MediaTypeExample } from "@/json-schema/MediaTypeExample";
+import {
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import useAppConfig from "@/hooks/appConfig.hook";
+import CodeDisplay from "@/components/CodeDisplay";
+import SplitView from "@/components/SplitView";
 
 export type OpenApiOperationExamplesProps = {
   onTryExample?: (example: MediaTypeExample) => void;
@@ -18,6 +31,7 @@ const Examples = ({
 }) => {
   const mediaTypeSelectId = useId();
   const keySelectId = useId();
+  const { mediaTypeSerializer } = useAppConfig();
 
   const hasExamples = useMemo(
     () => Object.keys(examples.mediaTypes).length > 0,
@@ -26,7 +40,13 @@ const Examples = ({
 
   const [selectedExampleMediaType, setSelectedExampleMediaType] = useState<
     keyof typeof examples.mediaTypes | undefined
-  >(hasExamples ? Object.keys(examples.mediaTypes)[0] : undefined);
+  >(
+    hasExamples
+      ? mediaTypeSerializer.findFirstSupportedMediaType(
+          Object.keys(examples.mediaTypes),
+        )
+      : undefined,
+  );
   const [selectedExampleKey, setSelectedExampleKey] = useState<
     number | undefined
   >(selectedExampleMediaType !== undefined ? 0 : undefined);
@@ -37,11 +57,24 @@ const Examples = ({
         : undefined,
     [examples, selectedExampleKey, selectedExampleMediaType],
   );
+  const selectedExampleSerializedValue = useMemo(() => {
+    if (!selectedExample || !selectedExampleMediaType) return "";
+
+    return mediaTypeSerializer.serialize(
+      selectedExample.value,
+      selectedExampleMediaType as (typeof mediaTypeSerializer.supportedMediaTypes)[number],
+    );
+  }, [mediaTypeSerializer, selectedExample, selectedExampleMediaType]);
+
   useEffect(() => {
     setSelectedExampleMediaType(
-      hasExamples ? Object.keys(examples.mediaTypes)[0] : undefined,
+      hasExamples
+        ? mediaTypeSerializer.findFirstSupportedMediaType(
+            Object.keys(examples.mediaTypes),
+          )
+        : undefined,
     );
-  }, [examples, hasExamples]);
+  }, [examples, hasExamples, mediaTypeSerializer]);
   useEffect(() => {
     setSelectedExampleKey(
       selectedExampleMediaType !== undefined ? 0 : undefined,
@@ -55,61 +88,98 @@ const Examples = ({
   return (
     <>
       {hasExamples ? (
-        <div>
-          <label htmlFor={mediaTypeSelectId}>Media Type</label>
-          <select
-            id={mediaTypeSelectId}
-            onChange={(e) => setSelectedExampleMediaType(e.target.value)}
-            value={selectedExampleMediaType}
-          >
-            {Object.keys(examples.mediaTypes).map((requestExampleMediaType) => (
-              <option
-                key={requestExampleMediaType}
-                value={requestExampleMediaType}
-              >
-                {requestExampleMediaType}
-              </option>
-            ))}
-          </select>
-          <label htmlFor={keySelectId}>Example</label>
-          <select
-            disabled={selectedExampleMediaType === undefined}
-            id={keySelectId}
-            onChange={(e) => setSelectedExampleKey(Number(e.target.value))}
-            value={selectedExampleKey}
-          >
-            {selectedExampleMediaType === undefined ? (
-              <>
-                <option value={undefined}>Select a media type first</option>
-              </>
-            ) : (
-              (examples.mediaTypes[selectedExampleMediaType] ?? []).map(
-                ({ title, summary, description }, idx) => (
-                  <option key={idx} value={idx}>
-                    {title ?? summary ?? description ?? idx}
-                  </option>
-                ),
-              )
-            )}
-          </select>
-          <div>
+        <Stack spacing={2}>
+          <SplitView
+            left={
+              <Stack>
+                <FormControl>
+                  <InputLabel htmlFor={mediaTypeSelectId}>
+                    Media type
+                  </InputLabel>
+                  <Select
+                    variant={"outlined"}
+                    id={mediaTypeSelectId}
+                    label={"Media type"}
+                    onChange={(e) =>
+                      setSelectedExampleMediaType(e.target.value)
+                    }
+                    value={selectedExampleMediaType}
+                  >
+                    {Object.keys(examples.mediaTypes).map(
+                      (requestExampleMediaType) => {
+                        const isSupported = mediaTypeSerializer.supports(
+                          requestExampleMediaType,
+                        );
+
+                        return (
+                          <MenuItem
+                            key={requestExampleMediaType}
+                            disabled={!isSupported}
+                            value={requestExampleMediaType}
+                          >
+                            <Typography>{requestExampleMediaType}</Typography>
+                          </MenuItem>
+                        );
+                      },
+                    )}
+                  </Select>
+                </FormControl>
+              </Stack>
+            }
+            right={
+              <Stack>
+                <FormControl>
+                  <InputLabel htmlFor={keySelectId}>Example</InputLabel>
+                  <Select
+                    variant={"outlined"}
+                    // disabled={selectedExampleMediaType === undefined}
+                    id={keySelectId}
+                    label={"Example"}
+                    onChange={(e) =>
+                      setSelectedExampleKey(Number(e.target.value))
+                    }
+                    value={selectedExampleKey}
+                  >
+                    {selectedExampleMediaType === undefined ? (
+                      <>
+                        <MenuItem disabled={true} value={""}>
+                          <i>Select a media type first.</i>
+                        </MenuItem>
+                      </>
+                    ) : (
+                      (examples.mediaTypes[selectedExampleMediaType] ?? []).map(
+                        ({ title, summary, description }, idx) => (
+                          <MenuItem key={idx} value={idx}>
+                            {title ??
+                              summary ??
+                              description ??
+                              `Example #${idx + 1}`}
+                          </MenuItem>
+                        ),
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+              </Stack>
+            }
+          />
+
+          <Stack>
             {selectedExample ? (
               <>
-                <p>{selectedExample.summary}</p>
-                <p>{selectedExample.description}</p>
-                <pre>
-                  <code>{JSON.stringify(selectedExample.value, null, 2)}</code>
-                </pre>
+                <Typography>{selectedExample.summary}</Typography>
+                <Typography>{selectedExample.description}</Typography>
+                <CodeDisplay text={selectedExampleSerializedValue} />
               </>
             ) : (
               <>
-                <p>Select an example</p>
+                <i>Select an example to visualize it.</i>
               </>
             )}
-          </div>
-        </div>
+          </Stack>
+        </Stack>
       ) : (
-        <i>No examples available</i>
+        <i>No examples available.</i>
       )}
     </>
   );
@@ -125,6 +195,7 @@ const OpenApiOperationExamples = ({
     () => ({
       mediaTypes: operation
         .getRequestBodyExamples()
+        .filter(({ examples }) => examples.length > 0)
         .map(({ mediaType, examples }) => ({
           [mediaType]: examples,
         }))
@@ -134,20 +205,37 @@ const OpenApiOperationExamples = ({
   );
 
   const responseExamplesByStatus = useMemo(
-    () => operation.getResponseExamples() ?? [],
+    () =>
+      (operation.getResponseExamples() ?? [])
+        .map((responseExampleByStatus) => {
+          return {
+            [responseExampleByStatus.status]: {
+              ...responseExampleByStatus,
+              mediaTypes: Object.entries(responseExampleByStatus.mediaTypes)
+                .map(([mediaType, responseExample]) =>
+                  responseExample.length > 0
+                    ? {
+                        [mediaType]: responseExample,
+                      }
+                    : {},
+                )
+                .reduce((x, y) => ({ ...x, ...y }), {}),
+            },
+          };
+        })
+        .reduce((x, y) => ({ ...x, ...y }), {}),
     [operation],
   );
   const [responseExamplesSelectedStatus, setResponseExamplesSelectedStatus] =
-    useState<string | undefined>(responseExamplesByStatus[0]?.status);
+    useState<string | undefined>(Object.keys(responseExamplesByStatus)[0]);
   useEffect(() => {
-    setResponseExamplesSelectedStatus(responseExamplesByStatus[0]?.status);
+    setResponseExamplesSelectedStatus(Object.keys(responseExamplesByStatus)[0]);
   }, [responseExamplesByStatus]);
   const selectedResponseExamples = useMemo(
     () =>
-      responseExamplesByStatus.find(
-        (responseExamples) =>
-          responseExamples.status === responseExamplesSelectedStatus,
-      ),
+      responseExamplesSelectedStatus
+        ? responseExamplesByStatus[responseExamplesSelectedStatus]
+        : undefined,
     [responseExamplesByStatus, responseExamplesSelectedStatus],
   );
 
@@ -155,71 +243,109 @@ const OpenApiOperationExamples = ({
     useState<MediaTypeExample | undefined>(undefined);
 
   return (
-    <>
-      <p>Examples</p>
-      <p>Request Examples</p>
-      <Examples
-        examples={requestExamples}
-        onExampleSelected={(example) =>
-          setSelectedRequestExampleForTryIt(example)
+    <Stack spacing={2}>
+      <Typography variant={"h6"}>Examples</Typography>
+
+      <SplitView
+        left={
+          <Stack spacing={2}>
+            <Typography variant={"h6"}>Request Examples</Typography>
+            <Examples
+              examples={requestExamples}
+              onExampleSelected={(example) =>
+                setSelectedRequestExampleForTryIt(example)
+              }
+            />
+
+            {Object.keys(requestExamples.mediaTypes).length > 0 && (
+              <Stack direction={"row"}>
+                <Button
+                  variant={"outlined"}
+                  className={"uppercase"}
+                  disabled={selectedRequestExampleForTryIt === undefined}
+                  onClick={() =>
+                    onTryExample?.(selectedRequestExampleForTryIt!)
+                  }
+                >
+                  Try this example
+                </Button>
+              </Stack>
+            )}
+          </Stack>
         }
-      />
-      {Object.keys(requestExamples.mediaTypes).length > 0 && (
-        <button
-          type="button"
-          disabled={selectedRequestExampleForTryIt === undefined}
-          onClick={() => onTryExample?.(selectedRequestExampleForTryIt!)}
-        >
-          Try this example
-        </button>
-      )}
+        right={
+          <Stack spacing={2}>
+            <Typography variant={"h6"}>Response Examples</Typography>
 
-      <p>Response Examples</p>
-      {responseExamplesByStatus && responseExamplesByStatus.length > 0 ? (
-        <>
-          <label htmlFor={responseExamplesStatusCodeSelectId}>
-            Response status code
-          </label>
-          <select
-            id={responseExamplesStatusCodeSelectId}
-            onChange={(e) => setResponseExamplesSelectedStatus(e.target.value)}
-            value={responseExamplesSelectedStatus}
-          >
-            {responseExamplesByStatus.map((responseExample) => (
-              <option
-                key={responseExample.status}
-                value={responseExample.status}
-              >
-                {responseExample.status}
-                {responseExample.onlyHeaders && <i>-</i>}
-              </option>
-            ))}
-          </select>
-
-          <>
-            {selectedResponseExamples ? (
+            {responseExamplesByStatus &&
+            Object.keys(responseExamplesByStatus).length > 0 ? (
               <>
-                {selectedResponseExamples.onlyHeaders && (
-                  <i>No response body</i>
-                )}
-                {!selectedResponseExamples.onlyHeaders && (
-                  <Examples
-                    key={selectedResponseExamples.status}
-                    examples={selectedResponseExamples}
-                  />
-                )}
+                <FormControl>
+                  <InputLabel htmlFor={responseExamplesStatusCodeSelectId}>
+                    Response status code
+                  </InputLabel>
+                  <Select
+                    variant={"outlined"}
+                    id={responseExamplesStatusCodeSelectId}
+                    label={"Response status code"}
+                    onChange={(e) =>
+                      setResponseExamplesSelectedStatus(e.target.value)
+                    }
+                    value={responseExamplesSelectedStatus}
+                  >
+                    {Object.values(responseExamplesByStatus).map(
+                      (responseExample) => (
+                        <MenuItem
+                          key={responseExample.status}
+                          value={responseExample.status}
+                        >
+                          <Tooltip
+                            title={
+                              responseExample.onlyHeaders &&
+                              "Response contains only headers"
+                            }
+                          >
+                            <Stack direction={"row"} spacing={1}>
+                              {responseExample.status}
+                              {responseExample.onlyHeaders && (
+                                //<Rule />
+                                <i>*</i>
+                              )}
+                            </Stack>
+                          </Tooltip>
+                        </MenuItem>
+                      ),
+                    )}
+                  </Select>
+                </FormControl>
+
+                <>
+                  {selectedResponseExamples ? (
+                    <>
+                      {selectedResponseExamples.onlyHeaders && (
+                        <i>No response body.</i>
+                      )}
+                      {!selectedResponseExamples.onlyHeaders && (
+                        <Examples
+                          key={selectedResponseExamples.status}
+                          examples={selectedResponseExamples}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <i>Select a response status code.</i>
+                    </>
+                  )}
+                </>
               </>
             ) : (
-              <>
-                <p>Select an response status code</p>
-              </>
+              <i>No examples available.</i>
             )}
-          </>
-        </>
-      ) : (
-        <i>No examples available</i>
-      )}
-    </>
+          </Stack>
+        }
+      />
+    </Stack>
   );
 };
 
