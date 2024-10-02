@@ -25,7 +25,10 @@ import {
 import ServerSelector from "../../components/ServerSelector";
 import Ajv from "ajv";
 import addAjvFormats from "ajv-formats";
+import metaSchemaDraft06 from "ajv/dist/refs/json-schema-draft-06.json";
+import metaSchemaDraft07 from "ajv/dist/refs/json-schema-draft-07.json";
 import addMetaSchema2019 from "ajv/dist/refs/json-schema-2019-09";
+import addMetaSchema2020 from "ajv/dist/refs/json-schema-2020-12";
 import { JsonFormsRendererRegistryEntry } from "@jsonforms/core";
 import PatternPropertiesRenderer, {
   patternPropertiesControlTester,
@@ -145,7 +148,10 @@ const App = () => {
       defaultMeta: "https://json-schema.org/draft/2019-09/schema",
     });
     addAjvFormats(a, {});
+    a.addMetaSchema(metaSchemaDraft06);
+    a.addMetaSchema(metaSchemaDraft07);
     addMetaSchema2019.call(a);
+    addMetaSchema2020.call(a);
 
     return a;
   }, []);
