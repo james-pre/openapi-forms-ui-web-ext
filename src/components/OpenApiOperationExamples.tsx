@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Operation } from "oas/operation";
 import { MediaTypeExample } from "@/json-schema/MediaTypeExample";
 import {
@@ -14,9 +14,16 @@ import {
 import useAppConfig from "@/hooks/appConfig.hook";
 import CodeDisplay from "@/components/CodeDisplay";
 import SplitView from "@/components/SplitView";
+import merge from "lodash-es/merge";
+import { SupportedMediaType } from "@/utils/mediaTypeSerializer";
+
+export type ExampleCallbackEvent = {
+  mediaType: SupportedMediaType;
+  example: MediaTypeExample;
+};
 
 export type OpenApiOperationExamplesProps = {
-  onTryExample?: (example: MediaTypeExample) => void;
+  onTryExample?: (e: ExampleCallbackEvent) => void;
   operation: Operation;
 };
 
@@ -27,7 +34,7 @@ const Examples = ({
   examples: {
     mediaTypes: Record<string, MediaTypeExample[]>;
   };
-  onExampleSelected?: (example: MediaTypeExample) => void;
+  onExampleSelected?: (e: ExampleCallbackEvent) => void;
 }) => {
   const mediaTypeSelectId = useId();
   const keySelectId = useId();
@@ -39,7 +46,7 @@ const Examples = ({
   );
 
   const [selectedExampleMediaType, setSelectedExampleMediaType] = useState<
-    keyof typeof examples.mediaTypes | undefined
+    SupportedMediaType | undefined
   >(
     hasExamples
       ? mediaTypeSerializer.findFirstSupportedMediaType(
@@ -62,7 +69,7 @@ const Examples = ({
 
     return mediaTypeSerializer.serialize(
       selectedExample.value,
-      selectedExampleMediaType as (typeof mediaTypeSerializer.supportedMediaTypes)[number],
+      selectedExampleMediaType,
     );
   }, [mediaTypeSerializer, selectedExample, selectedExampleMediaType]);
 
@@ -81,9 +88,12 @@ const Examples = ({
     );
   }, [selectedExampleMediaType]);
   useEffect(() => {
-    if (selectedExample && onExampleSelected)
-      onExampleSelected(selectedExample);
-  }, [onExampleSelected, selectedExample]);
+    if (selectedExample && selectedExampleMediaType && onExampleSelected)
+      onExampleSelected({
+        mediaType: selectedExampleMediaType,
+        example: selectedExample,
+      });
+  }, [onExampleSelected, selectedExample, selectedExampleMediaType]);
 
   return (
     <>
@@ -101,7 +111,9 @@ const Examples = ({
                     id={mediaTypeSelectId}
                     label={"Media type"}
                     onChange={(e) =>
-                      setSelectedExampleMediaType(e.target.value)
+                      setSelectedExampleMediaType(
+                        e.target.value as SupportedMediaType,
+                      )
                     }
                     value={selectedExampleMediaType ?? ""}
                   >
@@ -199,7 +211,7 @@ const OpenApiOperationExamples = ({
         .map(({ mediaType, examples }) => ({
           [mediaType]: examples,
         }))
-        .reduce((x, y) => ({ ...x, ...y }), {}),
+        .reduce<Record<string, MediaTypeExample[]>>(merge, {}),
     }),
     [operation],
   );
@@ -219,11 +231,20 @@ const OpenApiOperationExamples = ({
                       }
                     : {},
                 )
-                .reduce((x, y) => ({ ...x, ...y }), {}),
+                .reduce<Record<string, MediaTypeExample[]>>(merge, {}),
             },
           };
         })
-        .reduce((x, y) => ({ ...x, ...y }), {}),
+        .reduce<
+          Record<
+            string,
+            {
+              mediaTypes: Record<string, MediaTypeExample[]>;
+              onlyHeaders?: boolean;
+              status: string;
+            }
+          >
+        >(merge, {}),
     [operation],
   );
   const [responseExamplesSelectedStatus, setResponseExamplesSelectedStatus] =
@@ -240,7 +261,18 @@ const OpenApiOperationExamples = ({
   );
 
   const [selectedRequestExampleForTryIt, setSelectedRequestExampleForTryIt] =
-    useState<MediaTypeExample | undefined>(undefined);
+    useState<
+      | {
+          mediaType: SupportedMediaType;
+          example: MediaTypeExample;
+        }
+      | undefined
+    >(undefined);
+
+  const onTryThisExampleClick = useCallback(
+    () => onTryExample?.(selectedRequestExampleForTryIt!),
+    [onTryExample, selectedRequestExampleForTryIt],
+  );
 
   return (
     <Stack spacing={2}>
@@ -252,9 +284,7 @@ const OpenApiOperationExamples = ({
             <Typography variant={"h6"}>Request Examples</Typography>
             <Examples
               examples={requestExamples}
-              onExampleSelected={(example) =>
-                setSelectedRequestExampleForTryIt(example)
-              }
+              onExampleSelected={setSelectedRequestExampleForTryIt}
             />
 
             {Object.keys(requestExamples.mediaTypes).length > 0 && (
@@ -263,9 +293,7 @@ const OpenApiOperationExamples = ({
                   variant={"outlined"}
                   className={"uppercase"}
                   disabled={selectedRequestExampleForTryIt === undefined}
-                  onClick={() =>
-                    onTryExample?.(selectedRequestExampleForTryIt!)
-                  }
+                  onClick={onTryThisExampleClick}
                 >
                   Try this example
                 </Button>

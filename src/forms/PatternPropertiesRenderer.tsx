@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { ControlProps, rankWith } from "@jsonforms/core";
 import { JsonForms, withJsonFormsControlProps } from "@jsonforms/react";
-import { useJsonFormsConfig } from "../hooks/useJsonFormsConfig.hook";
-import { generateDefaultValue } from "../json-schema/generateDefaultValue";
-import { unescapeRegexSource } from "../utils/regex";
+import { useJsonFormsConfig } from "@/hooks/useJsonFormsConfig.hook";
+import { generateDefaultValue } from "@/json-schema/generateDefaultValue";
+import { unescapeRegexSource } from "@/utils/regex";
+import merge from "lodash-es/merge";
 
 const PatternPropertiesRenderer = (
   props: ControlProps & { data: Record<string, unknown> },
@@ -35,7 +36,7 @@ const PatternPropertiesRenderer = (
         .map((key) => ({
           [key]: regexPatterns.find((pattern) => pattern.test(key))!,
         }))
-        .reduce((x, y) => ({ ...x, ...y }), {}),
+        .reduce<Record<string, RegExp>>(merge, {}),
     [data, regexPatterns],
   );
 

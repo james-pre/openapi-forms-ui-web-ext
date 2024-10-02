@@ -38,6 +38,7 @@ import HelpIcon from "@/components/HelpIcon";
 import CodeDisplay from "@/components/CodeDisplay";
 import useAppConfig from "@/hooks/appConfig.hook";
 import { SupportedMediaType } from "@/utils/mediaTypeSerializer";
+import merge from "lodash-es/merge";
 
 enum Mode {
   View,
@@ -96,7 +97,7 @@ const OpenApiOperationDisplay = ({
             errors: undefined,
           },
         }))
-        .reduce<ParametersState>((x, y) => ({ ...x, ...y }), {}),
+        .reduce<ParametersState>(merge, {}),
     [parameters],
   );
   const [parametersState, setParameterState] = useReducer(
@@ -358,7 +359,8 @@ const OpenApiOperationDisplay = ({
         <>
           <OpenApiOperationExamples
             operation={operation}
-            onTryExample={(example) => {
+            onTryExample={({ example, mediaType }) => {
+              setContentType(mediaType);
               updateBodyState({
                 data: example.value,
                 errors: undefined,

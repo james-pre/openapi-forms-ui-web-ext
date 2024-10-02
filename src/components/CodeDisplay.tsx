@@ -1,18 +1,25 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { IconButton, Stack, Typography } from "@mui/material";
 import { ContentCopy } from "@mui/icons-material";
 import useAppConfig from "@/hooks/appConfig.hook";
 
 export type CodeDisplayProps = {
-  text: string;
+  text?: string | null | undefined;
 };
 
 const CodeDisplay = React.memo(({ text }: CodeDisplayProps) => {
   const { sandboxLink } = useAppConfig();
+
+  const textHasValue = useMemo(
+    () => text !== null && text !== undefined,
+    [text],
+  );
   const onCopyClick = useCallback(() => {
-    void (async () => {
-      await sandboxLink.copyText(text);
-    })();
+    if (text !== null && text !== undefined) {
+      void (async () => {
+        await sandboxLink.copyText(text);
+      })();
+    }
   }, [sandboxLink, text]);
 
   return (
@@ -25,11 +32,11 @@ const CodeDisplay = React.memo(({ text }: CodeDisplayProps) => {
           padding={2}
           className={"break-all"}
         >
-          {text}
+          {textHasValue ? text : <em>Value is empty.</em>}
         </Typography>
       </Stack>
       <Stack alignSelf={"center"}>
-        <IconButton onClick={onCopyClick}>
+        <IconButton disabled={!textHasValue} onClick={onCopyClick}>
           <ContentCopy />
         </IconButton>
       </Stack>
