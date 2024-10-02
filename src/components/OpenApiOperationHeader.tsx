@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from "react";
 import { HttpMethods } from "oas/types";
 import { Chip, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { ContentCopy } from "@mui/icons-material";
+import { SandboxLink } from "@/utils/sandboxLink";
 
 export interface OpenApiOperationHeaderProps {
   method: string;
@@ -56,8 +57,7 @@ const OpenApiOperationHeader = ({
   }, [methodLowercase, theme]);
 
   const onCopyClick = useCallback(async () => {
-    // TODO: Fix extension permission issues
-    await window.navigator.clipboard.writeText(path);
+    await new SandboxLink().copyText(path);
   }, [path]);
 
   return (

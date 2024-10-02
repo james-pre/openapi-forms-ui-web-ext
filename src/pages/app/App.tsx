@@ -61,6 +61,7 @@ import OpenApiOperationAuthorization from "@/components/OpenApiOperationAuthoriz
 import { AuthorizationValue } from "@/utils/authorization";
 import { MediaTypeSerializer } from "@/utils/mediaTypeSerializer";
 import { AppConfig, AppConfigContext } from "@/hooks/appConfig.hook";
+import { SandboxLink } from "@/utils/sandboxLink";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +150,7 @@ const App = () => {
     return a;
   }, []);
   const mediaTypeSerializer = useMemo(() => new MediaTypeSerializer(), []);
+  const sandboxLink = useMemo(() => new SandboxLink(), []);
 
   useEffect(() => {
     console.log("ajv", ajv);
@@ -157,12 +159,12 @@ const App = () => {
     console.log("oas", oas);
   }, [oas]);
 
-  const appConfig = useMemo(
-    () =>
-      ({
-        mediaTypeSerializer,
-      }) as AppConfig,
-    [mediaTypeSerializer],
+  const appConfig = useMemo<AppConfig>(
+    () => ({
+      mediaTypeSerializer,
+      sandboxLink,
+    }),
+    [mediaTypeSerializer, sandboxLink],
   );
   const apiGlobalRequestConfig = useMemo(
     () =>
@@ -443,47 +445,6 @@ const App = () => {
                           ),
                         )}
                       </Stack>
-
-                      {/*<div style={{ display: "flex", flexDirection: "row" }}>
-                      <div style={{ width: "30dvw" }}>
-                        {Object.entries(oas.getPaths()).map(
-                          ([path, pathInfo]) =>
-                            Object.entries(pathInfo).map(
-                              ([method, operation]) => (
-                                <div key={path + " " + method}>
-                                  <button
-                                    role="button"
-                                    onClick={() =>
-                                      setSelectedOperation(operation)
-                                    }
-                                  >
-                                    {operation.getSummary()}
-                                  </button>
-                                </div>
-                              ),
-                            ),
-                        )}
-                      </div>
-                      <div style={{ flexGrow: 1 }}>
-                        {selectedOperation ? (
-                          <>
-                            <OpenApiOperationHeader
-                              method={selectedOperation.method}
-                              path={selectedOperation.path}
-                              summary={selectedOperation.getSummary()}
-                            />
-                            <OpenApiOperationDisplay
-                              key={selectedOperation.getOperationId()}
-                              operation={selectedOperation}
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <p>Select an operation from the sidebar</p>
-                          </>
-                        )}
-                      </div>
-                    </div>*/}
                     </Stack>
                   )}
                 </Container>

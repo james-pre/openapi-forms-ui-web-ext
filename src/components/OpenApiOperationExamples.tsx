@@ -103,7 +103,7 @@ const Examples = ({
                     onChange={(e) =>
                       setSelectedExampleMediaType(e.target.value)
                     }
-                    value={selectedExampleMediaType}
+                    value={selectedExampleMediaType ?? ""}
                   >
                     {Object.keys(examples.mediaTypes).map(
                       (requestExampleMediaType) => {
@@ -138,7 +138,7 @@ const Examples = ({
                     onChange={(e) =>
                       setSelectedExampleKey(Number(e.target.value))
                     }
-                    value={selectedExampleKey}
+                    value={selectedExampleKey ?? ""}
                   >
                     {selectedExampleMediaType === undefined ? (
                       <>

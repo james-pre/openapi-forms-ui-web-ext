@@ -10,8 +10,9 @@ const configuration: Configuration = {
   context: import.meta.dirname,
   entry: {
     app: "./src/pages/app/main.ts",
+    main: "./src/pages/main/main.ts",
     options: "./src/pages/options/main.ts",
-    background_script: "./src/background_script.ts",
+    service_worker: "./src/service-worker/service_worker.ts",
     content_script: "./src/content_script.ts",
   },
   module: {

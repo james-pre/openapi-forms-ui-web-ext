@@ -6,7 +6,7 @@
   },
   "author": "Ensemble Software S.R.L.",
   "background": {
-    "service_worker": "background_script.js"
+    "service_worker": "service_worker.js"
   },
   "browser_specific_settings": {
     "gecko": {
