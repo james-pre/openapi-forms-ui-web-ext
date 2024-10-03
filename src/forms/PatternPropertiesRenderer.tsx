@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import SplitView from "@/components/SplitView";
 
 const PatternPropertiesRenderer = (
   props: ControlProps & { data: Record<string, unknown> },
@@ -193,8 +194,8 @@ const PatternPropertiesRenderer = (
               </Alert>
             )}
 
-            <Grid2 container={true} spacing={1}>
-              <Grid2 size={6}>
+            <SplitView
+              left={
                 <Stack direction={"row"}>
                   <FormControl style={{ flexGrow: 1 }}>
                     <InputLabel htmlFor={newKeyPatternSelectId}>
@@ -218,30 +219,31 @@ const PatternPropertiesRenderer = (
                     </Select>
                   </FormControl>
                 </Stack>
-              </Grid2>
-
-              <Grid2 size={6}>
-                <FormControl style={{ flexGrow: 1 }}>
-                  <TextField
-                    id={newKeyTextFieldId}
-                    label={"New key"}
-                    onChange={(e) => setNewKey(e.target.value)}
-                    value={newKey}
-                    slotProps={{
-                      input: {
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton edge="end" onClick={handleAddKey}>
-                              <Add />
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      },
-                    }}
-                  />
-                </FormControl>
-              </Grid2>
-            </Grid2>
+              }
+              right={
+                <Stack direction={"row"}>
+                  <FormControl style={{ flexGrow: 1 }}>
+                    <TextField
+                      id={newKeyTextFieldId}
+                      label={"New key"}
+                      onChange={(e) => setNewKey(e.target.value)}
+                      value={newKey}
+                      slotProps={{
+                        input: {
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton edge="end" onClick={handleAddKey}>
+                                <Add />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        },
+                      }}
+                    />
+                  </FormControl>
+                </Stack>
+              }
+            />
           </Stack>
 
           {Object.keys(data).map((key) => (

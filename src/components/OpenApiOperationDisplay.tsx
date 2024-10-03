@@ -373,203 +373,126 @@ const OpenApiOperationDisplay = ({
 
       {mode === Mode.TryIt && (
         <Stack spacing={1}>
-          <SplitView
-            left={
-              <Stack spacing={2}>
-                <Stack spacing={2}>
-                  <Stack direction={"row"} alignItems={"center"} spacing={1}>
-                    <Typography variant={"h6"}>Authorization</Typography>
-                    <HelpIcon
-                      tooltip={
-                        "This will take precedence over the global request authorization"
-                      }
-                    />
-                  </Stack>
-                  <OpenApiOperationAuthorization
-                    onAuthorizationChange={setAuthorization}
-                    operation={operation}
-                  />
-                </Stack>
-
-                <Stack spacing={2}>
-                  <Typography variant={"h6"} marginBottom={1}>
-                    Request Parameters
-                  </Typography>
-                  <Stack>
-                    {parameters.length > 0 ? (
-                      parameters.map((parameter) => {
-                        return (
-                          <Stack key={parameter.name}>
-                            <JsonForms
-                              {...jsonFormsProps}
-                              data={parametersState[parameter.name]?.data}
-                              onChange={({ data, errors }) => {
-                                setParameterState({
-                                  data,
-                                  errors,
-                                  name: parameter.name,
-                                });
-                              }}
-                              schema={{
-                                title: parameter.name,
-                                description: parameter.description,
-                                ...parameter.schema,
-                              }}
-                            />
-                          </Stack>
-                        );
-                      })
-                    ) : (
-                      <>
-                        <i>No request parameters.</i>
-                      </>
-                    )}
-                  </Stack>
-                </Stack>
-
-                <Stack spacing={2}>
-                  <Typography variant={"h6"} marginBottom={1}>
-                    Request Body
-                  </Typography>
-                  <Stack>
-                    {requestBodySchema ? (
-                      <Stack spacing={1}>
-                        {availableContentTypes.length > 0 && (
-                          <Stack spacing={1}>
-                            <FormControl>
-                              <InputLabel htmlFor={contentTypeSelectId}>
-                                Content type
-                              </InputLabel>
-                              <Select
-                                variant={"outlined"}
-                                id={contentTypeSelectId}
-                                label={"Content type"}
-                                onChange={(e) =>
-                                  setContentType(
-                                    e.target.value as SupportedMediaType,
-                                  )
-                                }
-                                value={contentType}
-                              >
-                                {availableContentTypes.map(
-                                  (availableContentType) => (
-                                    <MenuItem
-                                      key={availableContentType}
-                                      disabled={
-                                        !mediaTypeSerializer.supports(
-                                          availableContentType,
-                                        )
-                                      }
-                                      value={availableContentType}
-                                    >
-                                      {availableContentType}
-                                    </MenuItem>
-                                  ),
-                                )}
-                              </Select>
-                            </FormControl>
-                            <Divider variant={"fullWidth"} />
-                          </Stack>
-                        )}
-                        <Stack
-                          sx={{
-                            "& .MuiGrid-item": {
-                              maxWidth: "100% !important",
-                            },
-                          }}
-                        >
-                          <JsonForms
-                            {...jsonFormsProps}
-                            data={bodyState.data}
-                            onChange={({ data, errors }) => {
-                              updateBodyState({ data, errors });
-                            }}
-                            schema={requestBodySchema}
-                          />
-                        </Stack>
-                      </Stack>
-                    ) : (
-                      <>
-                        <i>No request body.</i>
-                      </>
-                    )}
-                  </Stack>
-                </Stack>
+          <Stack spacing={2}>
+            <Stack spacing={2}>
+              <Stack direction={"row"} alignItems={"center"} spacing={1}>
+                <Typography variant={"h6"}>Authorization</Typography>
+                <HelpIcon
+                  tooltip={
+                    "This will take precedence over the global request authorization"
+                  }
+                />
               </Stack>
-            }
-            right={
-              <Stack spacing={2}>
-                <Stack spacing={2}>
-                  <Typography variant={"h6"}>Request</Typography>
+              <OpenApiOperationAuthorization
+                onAuthorizationChange={setAuthorization}
+                operation={operation}
+              />
+            </Stack>
 
-                  <Stack spacing={2}>
-                    <Stack>
-                      <Typography variant={"body1"}>cURL</Typography>
-                      {/*TODO: Make curl display scrollable and don't wrap, so we can display the request body on one line*/}
-                      <CodeDisplay text={curlText} />
-                    </Stack>
-
-                    <Stack>
-                      <Typography variant={"body1"}>Request URL</Typography>
-                      <CodeDisplay text={requestUrlText} />
-                    </Stack>
-
-                    <Stack>
-                      <Typography variant={"body1"}>Request body</Typography>
-                      <CodeDisplay text={requestBodyText} />
-                    </Stack>
-
-                    <Stack>
-                      <Typography variant={"body1"}>Request headers</Typography>
-                      <CodeDisplay text={requestHeadersText} />
-                    </Stack>
-                  </Stack>
-                </Stack>
-                <Stack spacing={2}>
-                  <Typography variant={"h6"}>
-                    Response
-                    {query.data &&
-                      ` (HTTP ${query.data.response.status} ${query.data.response.statusText}`.trimEnd() +
-                        ")"}
-                  </Typography>
-
-                  <Stack spacing={2}>
-                    <Stack>
-                      <Typography variant={"body1"}>Response body</Typography>
-                      <CodeDisplay text={responseBodyText} />
-                    </Stack>
-
-                    <Stack>
-                      <Typography variant={"body1"}>
-                        Response headers
-                      </Typography>
-                      <CodeDisplay text={responseHeadersText} />
-                    </Stack>
-
-                    <Stack direction={"row"} justifyContent={"flex-end"}>
-                      <Button
-                        className={"uppercase"}
-                        variant={"outlined"}
-                        onClick={() => void onClearResponseClick()}
-                      >
-                        Clear response
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </Stack>
-              </Stack>
-            }
-          />
-
-          <Stack>
-            {query.isError && (
+            <Stack spacing={2}>
+              <Typography variant={"h6"} marginBottom={1}>
+                Request Parameters
+              </Typography>
               <Stack>
-                <Alert severity="error">
-                  <AlertTitle>Error</AlertTitle>
-                  {String(query.error)}
-                </Alert>
+                {parameters.length > 0 ? (
+                  parameters.map((parameter) => {
+                    return (
+                      <Stack key={parameter.name}>
+                        <JsonForms
+                          {...jsonFormsProps}
+                          data={parametersState[parameter.name]?.data}
+                          onChange={({ data, errors }) => {
+                            setParameterState({
+                              data,
+                              errors,
+                              name: parameter.name,
+                            });
+                          }}
+                          schema={{
+                            title: parameter.name,
+                            description: parameter.description,
+                            ...parameter.schema,
+                          }}
+                        />
+                      </Stack>
+                    );
+                  })
+                ) : (
+                  <>
+                    <i>No request parameters.</i>
+                  </>
+                )}
               </Stack>
-            )}
+            </Stack>
+
+            <Stack spacing={2}>
+              <Typography variant={"h6"} marginBottom={1}>
+                Request Body
+              </Typography>
+              <Stack>
+                {requestBodySchema ? (
+                  <Stack spacing={1}>
+                    {availableContentTypes.length > 0 && (
+                      <Stack spacing={1}>
+                        <FormControl>
+                          <InputLabel htmlFor={contentTypeSelectId}>
+                            Content type
+                          </InputLabel>
+                          <Select
+                            variant={"outlined"}
+                            id={contentTypeSelectId}
+                            label={"Content type"}
+                            onChange={(e) =>
+                              setContentType(
+                                e.target.value as SupportedMediaType,
+                              )
+                            }
+                            value={contentType}
+                          >
+                            {availableContentTypes.map(
+                              (availableContentType) => (
+                                <MenuItem
+                                  key={availableContentType}
+                                  disabled={
+                                    !mediaTypeSerializer.supports(
+                                      availableContentType,
+                                    )
+                                  }
+                                  value={availableContentType}
+                                >
+                                  {availableContentType}
+                                </MenuItem>
+                              ),
+                            )}
+                          </Select>
+                        </FormControl>
+                        <Divider variant={"fullWidth"} />
+                      </Stack>
+                    )}
+                    <Stack
+                      sx={{
+                        "& .MuiGrid-item": {
+                          maxWidth: "100% !important",
+                        },
+                      }}
+                    >
+                      <JsonForms
+                        {...jsonFormsProps}
+                        data={bodyState.data}
+                        onChange={({ data, errors }) => {
+                          updateBodyState({ data, errors });
+                        }}
+                        schema={requestBodySchema}
+                      />
+                    </Stack>
+                  </Stack>
+                ) : (
+                  <>
+                    <i>No request body.</i>
+                  </>
+                )}
+              </Stack>
+            </Stack>
           </Stack>
 
           <Stack direction={"row"} spacing={2}>
@@ -593,6 +516,76 @@ const OpenApiOperationDisplay = ({
                 Execute request
               </Button>
             </Box>
+          </Stack>
+
+          <Stack>
+            {query.isError && (
+              <Stack>
+                <Alert severity="error">
+                  <AlertTitle>Error</AlertTitle>
+                  {String(query.error)}
+                </Alert>
+              </Stack>
+            )}
+          </Stack>
+
+          <Stack spacing={2}>
+            <Stack spacing={2}>
+              <Typography variant={"h6"}>Request</Typography>
+
+              <Stack spacing={2}>
+                <Stack>
+                  <Typography variant={"body1"}>cURL</Typography>
+                  {/*TODO: Make curl display scrollable and don't wrap, so we can display the request body on one line*/}
+                  <CodeDisplay text={curlText} />
+                </Stack>
+
+                <Stack>
+                  <Typography variant={"body1"}>Request URL</Typography>
+                  <CodeDisplay text={requestUrlText} />
+                </Stack>
+
+                <Stack>
+                  <Typography variant={"body1"}>Request body</Typography>
+                  <CodeDisplay text={requestBodyText} />
+                </Stack>
+
+                <Stack>
+                  <Typography variant={"body1"}>Request headers</Typography>
+                  <CodeDisplay text={requestHeadersText} />
+                </Stack>
+              </Stack>
+            </Stack>
+            <Stack spacing={2}>
+              <Typography variant={"h6"}>
+                Response
+                {query.data &&
+                  ` (HTTP ${query.data.response.status} ${query.data.response.statusText}`.trimEnd() +
+                    ")"}
+              </Typography>
+
+              <Stack spacing={2}>
+                <Stack>
+                  <Typography variant={"body1"}>Response body</Typography>
+                  <CodeDisplay text={responseBodyText} />
+                </Stack>
+
+                <Stack>
+                  <Typography variant={"body1"}>Response headers</Typography>
+                  <CodeDisplay text={responseHeadersText} />
+                </Stack>
+
+                <Stack direction={"row"}>
+                  <Button
+                    className={"uppercase"}
+                    variant={"outlined"}
+                    onClick={() => void onClearResponseClick()}
+                  >
+                    Clear response
+                  </Button>
+                </Stack>
+              </Stack>
+            </Stack>
           </Stack>
         </Stack>
       )}
