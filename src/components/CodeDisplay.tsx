@@ -5,9 +5,10 @@ import useAppConfig from "@/hooks/appConfig.hook";
 
 export type CodeDisplayProps = {
   text?: string | null | undefined;
+  wrap?: boolean;
 };
 
-const CodeDisplay = React.memo(({ text }: CodeDisplayProps) => {
+const CodeDisplay = React.memo(({ text, wrap = true }: CodeDisplayProps) => {
   const { sandboxLink } = useAppConfig();
 
   const textHasValue = useMemo(
@@ -24,15 +25,17 @@ const CodeDisplay = React.memo(({ text }: CodeDisplayProps) => {
 
   return (
     <Stack direction={"row"} spacing={1}>
-      <Stack bgcolor={"black"} borderRadius={1} flexGrow={1}>
+      <Stack bgcolor={"black"} borderRadius={1} flexGrow={1} overflow={"auto"}>
         <Typography
           variant={"body2"}
           color={"white"}
-          whiteSpace={"pre-wrap"}
           padding={2}
-          className={"break-all"}
+          sx={() => ({
+            whiteSpaceCollapse: "preserve",
+          })}
+          className={wrap ? "break-all" : "text-nowrap"}
         >
-          {textHasValue ? text : <em>Value is empty.</em>}
+          {textHasValue ? text : <em>{/*No value.*/}</em>}
         </Typography>
       </Stack>
       <Stack alignSelf={"center"}>

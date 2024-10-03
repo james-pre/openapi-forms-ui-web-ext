@@ -38,7 +38,8 @@ import CodeDisplay from "@/components/CodeDisplay";
 import useAppConfig from "@/hooks/appConfig.hook";
 import { SupportedMediaType } from "@/utils/mediaTypeSerializer";
 import merge from "lodash-es/merge";
-import SplitView from "@/components/SplitView";
+import { makeCurlCommand } from "@/utils/curl";
+import { concatUrlPaths } from "@/utils/url";
 
 enum Mode {
   View,
@@ -165,7 +166,7 @@ const OpenApiOperationDisplay = ({
         );
       });
 
-    const url = new URL(targetServer + path);
+    const url = new URL(concatUrlPaths(targetServer, path));
     operation
       .getParameters()
       .filter((parameter) => parameter.in === "query")
@@ -253,18 +254,20 @@ const OpenApiOperationDisplay = ({
 
   const curlText = useMemo(() => {
     if (!queryData)
-      return [
-        `curl -X '${operation.method.toUpperCase()}'`,
-        `'${apiGlobalRequestConfig.targetServer}${operation.path}'`,
-        `-H 'Accept: */*'`,
-      ].join(" \\\n\t");
+      return makeCurlCommand(
+        concatUrlPaths(apiGlobalRequestConfig.targetServer, operation.path),
+        operation.method,
+        apiGlobalRequestConfig.requestHeaders,
+      );
 
-    return [
-      `curl -X '${queryData.request.method!.toUpperCase()}'`,
-      `'${queryData.requestUrl.href}'`,
-      `-H ${[...new Headers(queryData.request.headers)].map(([key, value]) => `'${key}: ${value}'`).join(" \\\n\t-H ")}`,
-    ].join(" \\\n\t");
+    return makeCurlCommand(
+      queryData.requestUrl.href,
+      operation.method,
+      queryData?.request.headers,
+      queryData?.request.body,
+    );
   }, [
+    apiGlobalRequestConfig.requestHeaders,
     apiGlobalRequestConfig.targetServer,
     operation.method,
     operation.path,
@@ -272,28 +275,34 @@ const OpenApiOperationDisplay = ({
   ]);
   const requestUrlText = useMemo(() => {
     if (!queryData)
-      return `${apiGlobalRequestConfig.targetServer}${operation.path}`;
+      return concatUrlPaths(apiGlobalRequestConfig.targetServer, operation.path);
 
     return queryData.requestUrl.href;
   }, [apiGlobalRequestConfig.targetServer, operation.path, queryData]);
   const requestBodyText = useMemo(() => {
-    if (!queryData) return "\n";
+    if (!queryData) return undefined;
 
-    return (queryData.request.body as string) || "\n";
+    return queryData.request.body as string | undefined;
   }, [queryData]);
   const requestHeadersText = useMemo(() => {
-    if (!queryData) return "Accept: */*";
+    const headers = queryData
+      ? queryData.request.headers
+      : apiGlobalRequestConfig.requestHeaders;
 
-    return [...new Headers(queryData.request.headers)]
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\n");
-  }, [queryData]);
+    return (
+      [...new Headers(headers)]
+        .map(([key, value]) => `${key}: ${value}`)
+        .join("\n") || undefined
+    );
+  }, [apiGlobalRequestConfig.requestHeaders, queryData]);
 
-  const [responseBodyText, setResponseBodyText] = useState("\n");
+  const [responseBodyText, setResponseBodyText] = useState<string | undefined>(
+    undefined,
+  );
   useEffect(() => {
     void (async () => {
       if (!queryData) {
-        setResponseBodyText("\n");
+        setResponseBodyText(undefined);
         return;
       }
 
@@ -301,7 +310,7 @@ const OpenApiOperationDisplay = ({
     })();
   }, [queryData]);
   const responseHeadersText = useMemo(() => {
-    if (!queryData) return "\n";
+    if (!queryData) return undefined;
 
     return [...queryData.response.headers]
       .map(([key, value]) => `${key}: ${value}`)
@@ -536,8 +545,7 @@ const OpenApiOperationDisplay = ({
               <Stack spacing={2}>
                 <Stack>
                   <Typography variant={"body1"}>cURL</Typography>
-                  {/*TODO: Make curl display scrollable and don't wrap, so we can display the request body on one line*/}
-                  <CodeDisplay text={curlText} />
+                  <CodeDisplay text={curlText} wrap={false} />
                 </Stack>
 
                 <Stack>

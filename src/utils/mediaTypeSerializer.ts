@@ -68,17 +68,10 @@ export class MediaTypeSerializer {
   public serialize(
     input: unknown,
     mediaType: SupportedMediaType,
-    { prettyPrintSpacing = 2 } = {},
   ): string | null | undefined {
     switch (mediaType) {
       case "application/json":
-        return JSON.stringify(
-          input,
-          null,
-          prettyPrintSpacing !== undefined && prettyPrintSpacing !== null
-            ? prettyPrintSpacing
-            : undefined,
-        );
+        return JSON.stringify(input);
       case "application/x-www-form-urlencoded":
         return swaggerApplicationXWwwFormUrlencodedSerializer.serialize(input);
       default:

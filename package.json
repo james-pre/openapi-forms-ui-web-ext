@@ -1,6 +1,6 @@
 {
   "name": "openapi-forms-ui-web-ext",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "private": true,
   "description": "This web extension provides a user-friendly interface for interacting with OpenAPI specifications. It allows users to view and execute API operations, manage request parameters, and handle request bodies using dynamically generated forms.",
   "scripts": {
