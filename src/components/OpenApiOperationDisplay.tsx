@@ -22,7 +22,6 @@ import {
   Button,
   Divider,
   FormControl,
-  Grid2,
   InputLabel,
   MenuItem,
   Select,
@@ -39,6 +38,7 @@ import CodeDisplay from "@/components/CodeDisplay";
 import useAppConfig from "@/hooks/appConfig.hook";
 import { SupportedMediaType } from "@/utils/mediaTypeSerializer";
 import merge from "lodash-es/merge";
+import SplitView from "@/components/SplitView";
 
 enum Mode {
   View,
@@ -373,8 +373,8 @@ const OpenApiOperationDisplay = ({
 
       {mode === Mode.TryIt && (
         <Stack spacing={1}>
-          <Grid2 container={true} spacing={2}>
-            <Grid2 size={6}>
+          <SplitView
+            left={
               <Stack spacing={2}>
                 <Stack spacing={2}>
                   <Stack direction={"row"} alignItems={"center"} spacing={1}>
@@ -471,7 +471,13 @@ const OpenApiOperationDisplay = ({
                             <Divider variant={"fullWidth"} />
                           </Stack>
                         )}
-                        <Stack>
+                        <Stack
+                          sx={{
+                            "& .MuiGrid-item": {
+                              maxWidth: "100% !important",
+                            },
+                          }}
+                        >
                           <JsonForms
                             {...jsonFormsProps}
                             data={bodyState.data}
@@ -490,8 +496,8 @@ const OpenApiOperationDisplay = ({
                   </Stack>
                 </Stack>
               </Stack>
-            </Grid2>
-            <Grid2 size={6}>
+            }
+            right={
               <Stack spacing={2}>
                 <Stack spacing={2}>
                   <Typography variant={"h6"}>Request</Typography>
@@ -499,6 +505,7 @@ const OpenApiOperationDisplay = ({
                   <Stack spacing={2}>
                     <Stack>
                       <Typography variant={"body1"}>cURL</Typography>
+                      {/*TODO: Make curl display scrollable and don't wrap, so we can display the request body on one line*/}
                       <CodeDisplay text={curlText} />
                     </Stack>
 
@@ -551,8 +558,8 @@ const OpenApiOperationDisplay = ({
                   </Stack>
                 </Stack>
               </Stack>
-            </Grid2>
-          </Grid2>
+            }
+          />
 
           <Stack>
             {query.isError && (

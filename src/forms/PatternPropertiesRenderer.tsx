@@ -1,10 +1,32 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useId, useMemo, useState } from "react";
 import { ControlProps, rankWith } from "@jsonforms/core";
 import { JsonForms, withJsonFormsControlProps } from "@jsonforms/react";
 import { useJsonFormsConfig } from "@/hooks/useJsonFormsConfig.hook";
 import { generateDefaultValue } from "@/json-schema/generateDefaultValue";
 import { unescapeRegexSource } from "@/utils/regex";
 import merge from "lodash-es/merge";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Card,
+  CardContent,
+  CardHeader,
+  FormControl,
+  Grid2,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Add } from "@mui/icons-material";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 const PatternPropertiesRenderer = (
   props: ControlProps & { data: Record<string, unknown> },
@@ -14,18 +36,19 @@ const PatternPropertiesRenderer = (
     [props.data],
   );
 
+  const newKeyPatternSelectId = useId();
+  const newKeyTextFieldId = useId();
+
   const handleChange = props.handleChange.bind(null);
 
   const { path, schema } = props;
 
   const [newKey, setNewKey] = useState("");
-  const [selectedPattern, setSelectedPattern] = useState<string>("");
+  const [selectedPattern, setSelectedPattern] = useState("");
   const [error, setError] = useState("");
 
-  // Extract patternProperties and its regex patterns
   const patternProps = schema.patternProperties!;
 
-  // Memoize the keys and regex patterns
   const regexPatterns = useMemo(
     () => Object.keys(patternProps).map((pattern) => new RegExp(pattern)),
     [patternProps],
@@ -40,14 +63,17 @@ const PatternPropertiesRenderer = (
     [data, regexPatterns],
   );
 
-  // Function to check if a key matches a specific pattern
   const isValidKey = useCallback((key: string, pattern: string) => {
     const regex = new RegExp(pattern);
     return regex.test(key);
   }, []);
 
-  // Handle adding new key-value pair
   const handleAddKey = useCallback(() => {
+    if (!selectedPattern) {
+      setError("Please select a pattern");
+      return;
+    }
+
     if (!newKey) {
       setError("Key cannot be empty");
       return;
@@ -61,7 +87,7 @@ const PatternPropertiesRenderer = (
     }
 
     if (Object.prototype.hasOwnProperty.call(data, newKey)) {
-      setError(`The key "${newKey}" already exists.`);
+      setError(`The key "${newKey}" already exists`);
       return;
     }
 
@@ -81,20 +107,18 @@ const PatternPropertiesRenderer = (
     selectedPattern,
   ]);
 
-  // Handle removing a key-value pair
   const handleRemovePair = useCallback(
     (key: string) => {
       const updatedData = { ...data };
-      delete updatedData[key]; // Remove the selected key-value pair
-      handleChange(path, updatedData); // Update the data
+      delete updatedData[key];
+      handleChange(path, updatedData);
     },
     [data, handleChange, path],
   );
 
   const jsonFormsProps = useJsonFormsConfig();
 
-  // Render input fields using JSONForms
-  const renderInputField = useCallback(
+  const renderExistingKey = useCallback(
     (key: string) => {
       const value = data[key];
       const pattern = keyPatternMap[key];
@@ -102,69 +126,130 @@ const PatternPropertiesRenderer = (
       const propertySchema = patternProps[patternSourceUnescaped];
 
       return (
-        <JsonForms
-          {...jsonFormsProps}
-          data={value}
-          onChange={(state) => {
-            handleChange(path, {
-              ...data,
-              [key]: state.data as Record<string, unknown>,
-            });
+        <Accordion
+          defaultExpanded={true}
+          variant={"outlined"}
+          slotProps={{
+            transition: { unmountOnExit: true },
           }}
-          schema={propertySchema}
-        />
+        >
+          <AccordionSummary>
+            <Stack
+              direction={"row"}
+              flexGrow={1}
+              alignItems={"center"}
+              justifyContent={"space-between"}
+            >
+              <Typography variant={"h6"}>{key}</Typography>
+              <Tooltip title={"Delete"}>
+                <IconButton onClick={() => handleRemovePair(key)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <JsonForms
+              {...jsonFormsProps}
+              data={value}
+              onChange={(state) => {
+                handleChange(path, {
+                  ...data,
+                  [key]: state.data as Record<string, unknown>,
+                });
+              }}
+              schema={propertySchema}
+            />
+          </AccordionDetails>
+        </Accordion>
       );
     },
-    [data, handleChange, jsonFormsProps, keyPatternMap, path, patternProps],
+    [
+      data,
+      handleChange,
+      handleRemovePair,
+      jsonFormsProps,
+      keyPatternMap,
+      path,
+      patternProps,
+    ],
   );
 
   return (
-    <div>
-      <h3>{schema.title}</h3>
+    <Card
+      sx={(theme) => ({
+        marginBottom: theme.spacing(1),
+      })}
+    >
+      <CardHeader
+        title={<Typography variant={"h5"}>{schema.title}</Typography>}
+      />
+      <CardContent>
+        <Stack spacing={1}>
+          <Stack spacing={2}>
+            {error && (
+              <Alert severity="error">
+                <Typography>{error}</Typography>
+              </Alert>
+            )}
 
-      {/* Error message display */}
-      {error && (
-        <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>
-      )}
+            <Grid2 container={true} spacing={1}>
+              <Grid2 size={6}>
+                <Stack direction={"row"}>
+                  <FormControl style={{ flexGrow: 1 }}>
+                    <InputLabel htmlFor={newKeyPatternSelectId}>
+                      Pattern
+                    </InputLabel>
+                    <Select
+                      id={newKeyPatternSelectId}
+                      variant={"outlined"}
+                      label={"Pattern"}
+                      onChange={(e) => setSelectedPattern(e.target.value)}
+                      value={selectedPattern}
+                    >
+                      <MenuItem disabled={true} value="">
+                        Select a pattern
+                      </MenuItem>
+                      {Object.keys(patternProps).map((pattern) => (
+                        <MenuItem key={pattern} value={pattern}>
+                          {pattern}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Grid2>
 
-      {/* Add new key */}
-      <div>
-        <select
-          value={selectedPattern}
-          onChange={(e) => setSelectedPattern(e.target.value)}
-          style={{ marginRight: "10px" }}
-        >
-          <option value="">Select pattern</option>
-          {Object.keys(patternProps).map((pattern) => (
-            <option key={pattern} value={pattern}>
-              {pattern}
-            </option>
+              <Grid2 size={6}>
+                <FormControl style={{ flexGrow: 1 }}>
+                  <TextField
+                    id={newKeyTextFieldId}
+                    label={"New key"}
+                    onChange={(e) => setNewKey(e.target.value)}
+                    value={newKey}
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton edge="end" onClick={handleAddKey}>
+                              <Add />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
+                </FormControl>
+              </Grid2>
+            </Grid2>
+          </Stack>
+
+          {Object.keys(data).map((key) => (
+            <Stack key={key}>{renderExistingKey(key)}</Stack>
           ))}
-        </select>
-        {selectedPattern && (
-          <>
-            <label>New key</label>
-            <input
-              type="text"
-              placeholder="New key"
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-              style={{ marginRight: "10px" }}
-            />
-          </>
-        )}
-        <button onClick={handleAddKey}>Add key</button>
-      </div>
-
-      {/* Existing keys */}
-      {Object.keys(data).map((key) => (
-        <div key={key} style={{ marginBottom: "10px" }}>
-          <label>{key}</label>
-          {renderInputField(key)}
-          <button onClick={() => handleRemovePair(key)}>Remove</button>
-        </div>
-      ))}
-    </div>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -177,6 +262,5 @@ const patternPropertiesControlTester = rankWith(
   },
 );
 
-// Export the custom renderer
 export default withJsonFormsControlProps(PatternPropertiesRenderer);
 export { patternPropertiesControlTester };
