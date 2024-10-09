@@ -31,7 +31,7 @@ import {
 import OpenApiOperationAuthorization from "@/components/OpenApiOperationAuthorization";
 import {
   applyRequestOptionsFromAuthorizationValues,
-  AuthorizationValue,
+  AuthorizationValues,
 } from "@/utils/authorization";
 import HelpIcon from "@/components/HelpIcon";
 import CodeDisplay from "@/components/CodeDisplay";
@@ -40,6 +40,7 @@ import { SupportedMediaType } from "@/utils/mediaTypeSerializer";
 import merge from "lodash-es/merge";
 import { makeCurlCommand } from "@/utils/curl";
 import { concatUrlPaths } from "@/utils/url";
+import { SecuritySchemeMatrix } from "@/json-schema/security";
 
 enum Mode {
   View,
@@ -139,8 +140,10 @@ const OpenApiOperationDisplay = ({
   const [contentType, setContentType] = useState(() =>
     mediaTypeSerializer.findFirstSupportedMediaType(availableContentTypes),
   );
-  const [authorization, setAuthorization] = useState<AuthorizationValue>({
-    type: "none",
+  const [authorization, setAuthorization] = useState<AuthorizationValues>({
+    cookie: {},
+    header: {},
+    query: {},
   });
 
   const resetRequestState = useCallback(() => {
@@ -275,7 +278,10 @@ const OpenApiOperationDisplay = ({
   ]);
   const requestUrlText = useMemo(() => {
     if (!queryData)
-      return concatUrlPaths(apiGlobalRequestConfig.targetServer, operation.path);
+      return concatUrlPaths(
+        apiGlobalRequestConfig.targetServer,
+        operation.path,
+      );
 
     return queryData.requestUrl.href;
   }, [apiGlobalRequestConfig.targetServer, operation.path, queryData]);
@@ -394,7 +400,9 @@ const OpenApiOperationDisplay = ({
               </Stack>
               <OpenApiOperationAuthorization
                 onAuthorizationChange={setAuthorization}
-                operation={operation}
+                securitySchemeMatrix={
+                  operation.getSecurityWithTypes(true) as SecuritySchemeMatrix
+                }
               />
             </Stack>
 
@@ -456,7 +464,7 @@ const OpenApiOperationDisplay = ({
                                 e.target.value as SupportedMediaType,
                               )
                             }
-                            value={contentType}
+                            value={contentType ?? ""}
                           >
                             {availableContentTypes.map(
                               (availableContentType) => (

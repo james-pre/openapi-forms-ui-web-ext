@@ -1,8 +1,8 @@
 import { createContext, useContext } from "react";
-import { AuthorizationValue } from "@/utils/authorization";
+import { AuthorizationValues } from "@/utils/authorization";
 
 export type ApiGlobalRequestConfig = {
-  authorization: AuthorizationValue;
+  authorization: AuthorizationValues;
   requestHeaders: Record<string, string>;
   targetServer: string;
 };

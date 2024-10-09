@@ -60,52 +60,17 @@ import { groupBy } from "lodash-es";
 import { ExpandMore } from "@mui/icons-material";
 import OpenApiOperationHeader from "@/components/OpenApiOperationHeader";
 import OpenApiOperationDisplay from "@/components/OpenApiOperationDisplay";
-import OpenApiOperationAuthorization from "@/components/OpenApiOperationAuthorization";
-import { AuthorizationValue } from "@/utils/authorization";
+import { AuthorizationValues } from "@/utils/authorization";
 import { MediaTypeSerializer } from "@/utils/mediaTypeSerializer";
 import { AppConfig, AppConfigContext } from "@/hooks/appConfig.hook";
 import { SandboxLink } from "@/utils/sandboxLink";
+import OpenApiGlobalAuthorization from "@/components/Authorization/OpenApiGlobalAuthorization";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const renderers = useMemo(
     () => [
-      /*{
-              renderer: withJsonFormsControlProps((props: ControlProps) => (
-                <>
-                  {/!*<p>{JSON.stringify(props)}</p>*!/}
-                  <p>{props.label}</p>
-                  <p>{props.description}</p>
-                  <input
-                    type="file"
-                    value={props.data}
-                    onChange={(e) => props.handleChange(props.path, e.target.value)}
-                  />
-                </>
-              )),
-              tester: rankWith(3, (uiSchema, schema, context) => {
-                // @ts-ignore
-                const scope: string = uiSchema["scope"];
-                if (!scope) return false;
-      
-                let scopedSchema = schema;
-                if (scope !== "#") {
-                  const scopeSplit = scope.slice(2).split("/");
-                  const [path, ...scopes] = scopeSplit;
-                  if (path !== "properties") return false;
-      
-                  scopes.forEach((scope) => {
-                    scopedSchema = scopedSchema.properties![scope];
-                  });
-                }
-      
-                console.log(scopedSchema);
-                return (
-                  scopedSchema.type === "file" || scopedSchema.format === "binary"
-                );
-              }),
-            } as JsonFormsRendererRegistryEntry,*/
       ...materialRenderers,
       {
         tester: patternPropertiesControlTester,
@@ -139,7 +104,7 @@ const App = () => {
     initialUserDefinedHeaders,
   );
   const [globalRequestAuthorization, setGlobalRequestAuthorization] =
-    useState<AuthorizationValue>({ type: "none" });
+    useState<AuthorizationValues>({ cookie: {}, header: {}, query: {} });
 
   const ajv = useMemo(() => {
     const a = new Ajv({
@@ -333,51 +298,10 @@ const App = () => {
                       </Stack>
 
                       <Stack>
-                        <Stack
-                          direction={"row"}
-                          alignItems={"center"}
-                          spacing={1}
-                        >
-                          <Typography variant={"h6"}>
-                            Global Request Authorization
-                          </Typography>
-                          {/*<HelpIcon />*/}
-                        </Stack>
-
-                        <OpenApiOperationAuthorization
+                        <OpenApiGlobalAuthorization
+                          oas={oas}
                           onAuthorizationChange={setGlobalRequestAuthorization}
-                          operation={null!}
                         />
-                        {/*<Typography variant={"h6"}>Credentials</Typography>
-                      <Stack
-                        direction={"row"}
-                        alignItems={"center"}
-                        spacing={1}
-                      >
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={includeCredentials}
-                              onChange={(e) =>
-                                setIncludeCredentials(e.target.checked)
-                              }
-                            />
-                          }
-                          label={"Include credentials"}
-                          style={{ marginInlineEnd: 0 }}
-                        />
-
-                        <HelpIcon
-                          href={
-                            "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#including_credentials"
-                          }
-                          tooltip={
-                            "Checking this box will set `credentials: 'include'` in the fetch call. " +
-                            "This will have the effect of including the cookies on the associated origin with the request. " +
-                            "The server must respond with appropriate CORS headers to the pre-flight request, or the request will fail."
-                          }
-                        />
-                      </Stack>*/}
                       </Stack>
 
                       <Stack spacing={0}>

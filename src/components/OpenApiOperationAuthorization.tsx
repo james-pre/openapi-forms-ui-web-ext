@@ -1,268 +1,261 @@
-import { Operation } from "oas/operation";
-import React, { useEffect, useId, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Autocomplete,
+  Alert,
   FormControl,
   FormLabel,
-  Grid2,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
   Stack,
   TextField,
-  Typography,
 } from "@mui/material";
-import { AuthorizationType, AuthorizationValue } from "@/utils/authorization";
-
-type AuthorizationOption = {
-  label: string;
-  type: AuthorizationType;
-};
+import { AuthorizationValues } from "@/utils/authorization";
+import BasicAuthorization from "@/components/Authorization/BasicAuthorization";
+import {
+  SecurityScheme,
+  SecuritySchemeArray,
+  SecuritySchemeMatrix,
+} from "@/json-schema/security";
 
 export type OpenApiOperationAuthorizationProps = {
-  onAuthorizationChange?: (authorization: AuthorizationValue) => void;
-  operation: Operation;
+  emptySecuritySchemesLabel?: React.ReactNode;
+  onAuthorizationChange?: (authorization: AuthorizationValues) => void;
+  securitySchemeMatrix: SecuritySchemeMatrix;
 };
 
 const OpenApiOperationAuthorization = ({
+  emptySecuritySchemesLabel = <em>No security schemes.</em>,
   onAuthorizationChange,
-  operation,
+  securitySchemeMatrix,
 }: OpenApiOperationAuthorizationProps) => {
-  const authorizationOptionNone = useMemo<AuthorizationOption>(
-    () => ({ label: "None", type: "none" }),
+  const [
+    selectedSecuritySchemeMatrixIndex,
+    setSelectedSecuritySchemeMatrixIndex,
+  ] = useState(-1);
+
+  const securityOnChange = useCallback((event: SelectChangeEvent<number>) => {
+    setSelectedSecuritySchemeMatrixIndex(Number(event.target.value));
+  }, []);
+
+  const selectedSecuritySchemes = useMemo(() => {
+    return securitySchemeMatrix[selectedSecuritySchemeMatrixIndex];
+  }, [securitySchemeMatrix, selectedSecuritySchemeMatrixIndex]);
+
+  const [authorizationValues, setAuthorizationValues] =
+    useState<AuthorizationValues>({
+      cookie: {},
+      header: {},
+      query: {},
+    });
+  useEffect(() => {
+    setAuthorizationValues({ cookie: {}, header: {}, query: {} });
+  }, [selectedSecuritySchemeMatrixIndex]);
+  useEffect(() => {
+    if (onAuthorizationChange) {
+      onAuthorizationChange(authorizationValues);
+    }
+  }, [authorizationValues, onAuthorizationChange]);
+
+  const updateAuthorizationValue = useCallback(
+    (_in: keyof typeof authorizationValues, key: string, value: string) => {
+      setAuthorizationValues((prev) => ({
+        ...prev,
+        [_in]: {
+          ...prev[_in],
+          [key]: value,
+        },
+      }));
+    },
     [],
   );
-  const authorizationOptions = useMemo<AuthorizationOption[]>(
-    () => [
-      { label: "API Key", type: "api-key" },
-      { label: "Basic", type: "basic" },
-      { label: "Bearer", type: "bearer" },
-      { label: "Cookie", type: "cookie" },
-      { label: "Header", type: "header" },
-      { label: "Query", type: "query" },
-      authorizationOptionNone,
-    ],
-    [authorizationOptionNone],
+  const updateHeaderValue = useCallback(
+    (key: string, value: string) => {
+      updateAuthorizationValue("header", key, value);
+    },
+    [updateAuthorizationValue],
   );
 
-  const authorizationTypeId = useId();
-  const authorizationValueField1Id = useId();
-  const authorizationValueField2Id = useId();
+  const renderSecurityScheme = useCallback(
+    (scheme: SecurityScheme) => {
+      if (scheme.security.type === "apiKey") {
+        const schemeParameterKey = scheme.security.name;
+        const schemeIn = scheme.security.in;
 
-  const [selectedAuthorizationOption, setSelectedAuthorizationOption] =
-    useState(() => authorizationOptionNone);
+        if (schemeIn === "cookie") {
+          return (
+            <Alert severity="warning">
+              Unsupported position in &apos;{schemeIn}&apos;. Ensure the cookie
+              is present, and check the &quot;Include credentials&quot; checkbox
+              in the &quot;Global Request Authorization&quot; configuration
+              section.
+            </Alert>
+          );
+        }
 
-  const [authorizationValue, setAuthorizationValue] =
-    useState<AuthorizationValue>({ type: "none" });
-  useEffect(() => {
-    onAuthorizationChange?.(authorizationValue);
-  }, [authorizationValue, onAuthorizationChange]);
+        return (
+          <>
+            <FormControl>
+              <TextField
+                helperText={scheme.security.description}
+                label={`${scheme.security._key} (${scheme.security.type})`}
+                onChange={(e) =>
+                  updateAuthorizationValue(
+                    schemeIn,
+                    schemeParameterKey,
+                    e.target.value,
+                  )
+                }
+                value={authorizationValues[schemeIn][schemeParameterKey] ?? ""}
+              />
+            </FormControl>
+          </>
+        );
+      }
+
+      if (scheme.security.type === "http") {
+        if (scheme.security.scheme === "basic") {
+          return (
+            <BasicAuthorization
+              onChange={(basic) => updateHeaderValue("Authorization", basic)}
+            />
+          );
+        }
+        if (scheme.security.scheme === "bearer") {
+          return (
+            <>
+              <FormControl>
+                <FormLabel>
+                  {scheme.security._key} ({scheme.security.type}){" "}
+                  {scheme.security.bearerFormat &&
+                    `(${scheme.security.bearerFormat})`}
+                </FormLabel>
+                <TextField
+                  onChange={(e) =>
+                    updateHeaderValue(
+                      "Authorization",
+                      `Bearer ${e.target.value}`,
+                    )
+                  }
+                  value={
+                    authorizationValues.header["Authorization"]?.substring(
+                      "Bearer ".length,
+                    ) ?? ""
+                  }
+                />
+              </FormControl>
+            </>
+          );
+        }
+
+        const customHttpSecurityScheme = scheme.security.scheme;
+        return (
+          <>
+            <FormControl>
+              <FormLabel>
+                {scheme.security._key} ({scheme.security.type}) (
+                {customHttpSecurityScheme})
+              </FormLabel>
+              <TextField
+                onChange={(e) =>
+                  updateHeaderValue(
+                    "Authorization",
+                    `${customHttpSecurityScheme} ${e.target.value}`,
+                  )
+                }
+                value={
+                  authorizationValues.header["Authorization"]?.substring(
+                    `${customHttpSecurityScheme} `.length,
+                  ) ?? ""
+                }
+              />
+            </FormControl>
+          </>
+        );
+      }
+
+      if (scheme.security.type === "oauth2") {
+        return (
+          <Alert severity="error">
+            Unsupported security scheme type &apos;{scheme.security.type}&apos;.
+          </Alert>
+        );
+      }
+
+      if (scheme.security.type === "openIdConnect") {
+        return (
+          <Alert severity="error">
+            Unsupported security scheme type &apos;{scheme.security.type}&apos;.
+          </Alert>
+        );
+      }
+
+      return (
+        <>
+          <Alert severity="error">
+            Unknown security scheme type &apos;{scheme.security?.["type"]}
+            &apos;.
+          </Alert>
+        </>
+      );
+    },
+    [authorizationValues, updateAuthorizationValue, updateHeaderValue],
+  );
+
+  const renderSecuritySchemes = useCallback(
+    (securitySchemes: SecuritySchemeArray) => {
+      return (
+        <>
+          <Stack spacing={1}>
+            {securitySchemes.map((securityScheme, index) => (
+              <Stack key={index}>{renderSecurityScheme(securityScheme)}</Stack>
+            ))}
+          </Stack>
+        </>
+      );
+    },
+    [renderSecurityScheme],
+  );
+
+  if (securitySchemeMatrix.length === 0) {
+    return <Stack>{emptySecuritySchemesLabel}</Stack>;
+  }
 
   return (
     <Stack spacing={1}>
-      <Grid2 container={true} spacing={1}>
-        <Grid2 size={{ xs: 12, md: 4 }}>
-          <Stack>
-            <FormControl>
-              <FormLabel htmlFor={authorizationTypeId}>
-                Authorization type
-              </FormLabel>
-              <Autocomplete
-                id={authorizationTypeId}
-                getOptionLabel={(option) => option.label}
-                onChange={(_, newValue) => {
-                  const newAuthorizationOption =
-                    newValue ?? authorizationOptionNone;
+      <Stack>
+        <FormControl>
+          <InputLabel>Security</InputLabel>
+          <Select
+            label={"Security"}
+            onChange={securityOnChange}
+            value={selectedSecuritySchemeMatrixIndex}
+            variant={"outlined"}
+          >
+            <MenuItem value={-1}>
+              <em>None</em>
+            </MenuItem>
+            {securitySchemeMatrix.map((securitySchemes, index) => {
+              return (
+                <MenuItem key={index} value={index}>
+                  {securitySchemes
+                    .map(
+                      (securityScheme) =>
+                        `${securityScheme.security._key} (${securityScheme.security.type})`,
+                    )
+                    .join(" & ")}
+                </MenuItem>
+              );
+            })}
+          </Select>
+        </FormControl>
+      </Stack>
 
-                  setSelectedAuthorizationOption(newAuthorizationOption);
-                  setAuthorizationValue({
-                    type: newAuthorizationOption.type,
-                    name: "",
-                    password: "",
-                    username: "",
-                    value: "",
-                  });
-                }}
-                options={authorizationOptions}
-                renderInput={(params) => <TextField {...params} />}
-                value={selectedAuthorizationOption}
-              />
-            </FormControl>
-          </Stack>
-        </Grid2>
-        <Grid2 size={{ xs: 12, md: 8 }}>
-          <Stack>
-            {authorizationValue.type === "api-key" && (
-              <FormControl>
-                <FormLabel htmlFor={authorizationValueField1Id}>
-                  API key
-                </FormLabel>
-                <TextField
-                  id={authorizationValueField1Id}
-                  onChange={(e) =>
-                    setAuthorizationValue({
-                      ...authorizationValue,
-                      value: e.target.value,
-                    })
-                  }
-                  value={authorizationValue.value}
-                />
-              </FormControl>
-            )}
-
-            {authorizationValue.type === "basic" && (
-              <Grid2 container={true} spacing={1}>
-                <Grid2 size={6}>
-                  <Stack>
-                    <FormControl>
-                      <FormLabel htmlFor={authorizationValueField1Id}>
-                        Username
-                      </FormLabel>
-                      <TextField
-                        id={authorizationValueField1Id}
-                        onChange={(e) =>
-                          setAuthorizationValue({
-                            ...authorizationValue,
-                            username: e.target.value,
-                          })
-                        }
-                        value={authorizationValue.username}
-                      />
-                    </FormControl>
-                  </Stack>
-                </Grid2>
-                <Grid2 size={6}>
-                  <Stack>
-                    <FormControl>
-                      <FormLabel htmlFor={authorizationValueField2Id}>
-                        Password
-                      </FormLabel>
-                      <TextField
-                        id={authorizationValueField2Id}
-                        onChange={(e) =>
-                          setAuthorizationValue({
-                            ...authorizationValue,
-                            password: e.target.value,
-                          })
-                        }
-                        type={"password"}
-                        value={authorizationValue.password}
-                      />
-                    </FormControl>
-                  </Stack>
-                </Grid2>
-              </Grid2>
-            )}
-
-            {authorizationValue.type === "bearer" && (
-              <FormControl>
-                <FormLabel htmlFor={authorizationValueField1Id}>
-                  Bearer token
-                </FormLabel>
-                <TextField
-                  id={authorizationValueField1Id}
-                  onChange={(e) =>
-                    setAuthorizationValue({
-                      ...authorizationValue,
-                      value: e.target.value,
-                    })
-                  }
-                  value={authorizationValue.value}
-                />
-              </FormControl>
-            )}
-
-            {/* If the AuthorizationType is 'cookie', we pass `credentials: include` to the fetch call */}
-            {authorizationValue.type === "cookie" && <></>}
-
-            {authorizationValue.type === "header" && (
-              <Grid2 container={true} spacing={1}>
-                <Grid2 size={6}>
-                  <Stack>
-                    <FormControl>
-                      <FormLabel htmlFor={authorizationValueField1Id}>
-                        Name
-                      </FormLabel>
-                      <TextField
-                        id={authorizationValueField1Id}
-                        onChange={(e) =>
-                          setAuthorizationValue({
-                            ...authorizationValue,
-                            name: e.target.value,
-                          })
-                        }
-                        value={authorizationValue.name}
-                      />
-                    </FormControl>
-                  </Stack>
-                </Grid2>
-                <Grid2 size={6}>
-                  <Stack>
-                    <FormControl>
-                      <FormLabel htmlFor={authorizationValueField2Id}>
-                        Value
-                      </FormLabel>
-                      <TextField
-                        id={authorizationValueField2Id}
-                        onChange={(e) =>
-                          setAuthorizationValue({
-                            ...authorizationValue,
-                            value: e.target.value,
-                          })
-                        }
-                        value={authorizationValue.value}
-                      />
-                    </FormControl>
-                  </Stack>
-                </Grid2>
-              </Grid2>
-            )}
-
-            {authorizationValue.type === "query" && (
-              <Grid2 container={true} spacing={1}>
-                <Grid2 size={6}>
-                  <Stack>
-                    <FormControl>
-                      <FormLabel htmlFor={authorizationValueField1Id}>
-                        Query parameter name
-                      </FormLabel>
-                      <TextField
-                        id={authorizationValueField1Id}
-                        onChange={(e) =>
-                          setAuthorizationValue({
-                            ...authorizationValue,
-                            name: e.target.value,
-                          })
-                        }
-                        value={authorizationValue.name}
-                      />
-                    </FormControl>
-                  </Stack>
-                </Grid2>
-                <Grid2 size={6}>
-                  <Stack>
-                    <FormControl>
-                      <FormLabel htmlFor={authorizationValueField2Id}>
-                        Value
-                      </FormLabel>
-                      <TextField
-                        id={authorizationValueField2Id}
-                        onChange={(e) =>
-                          setAuthorizationValue({
-                            ...authorizationValue,
-                            value: e.target.value,
-                          })
-                        }
-                        value={authorizationValue.value}
-                      />
-                    </FormControl>
-                  </Stack>
-                </Grid2>
-              </Grid2>
-            )}
-
-            {/* Nothing to configure for the 'none' AuthorizationType */}
-            {authorizationValue.type === "none" && <></>}
-          </Stack>
-        </Grid2>
-      </Grid2>
+      {selectedSecuritySchemes ? (
+        <Stack>{renderSecuritySchemes(selectedSecuritySchemes)}</Stack>
+      ) : (
+        <></>
+      )}
     </Stack>
   );
 };
