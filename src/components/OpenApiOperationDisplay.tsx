@@ -1,17 +1,8 @@
 import { Operation } from "oas/operation";
 import { JsonForms } from "@jsonforms/react";
-import React, {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useReducer,
-  useState,
-} from "react";
-import * as ajv from "ajv";
+import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useJsonFormsConfig } from "@/hooks/useJsonFormsConfig.hook";
 import { JSONSchema } from "@/json-schema/JSONSchema";
-import { generateDefaultValue } from "@/json-schema/generateDefaultValue";
 import OpenApiOperationExamples from "./OpenApiOperationExamples";
 import useApiGlobalRequestConfig from "@/hooks/apiGlobalRequestConfig.hook";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,34 +28,36 @@ import HelpIcon from "@/components/HelpIcon";
 import CodeDisplay from "@/components/CodeDisplay";
 import useAppConfig from "@/hooks/appConfig.hook";
 import { SupportedMediaType } from "@/utils/mediaTypeSerializer";
-import merge from "lodash-es/merge";
 import { makeCurlCommand } from "@/utils/curl";
 import { concatUrlPaths } from "@/utils/url";
 import { SecuritySchemeMatrix } from "@/json-schema/security";
+import { BodyState, ParametersState } from "@/components/OpenApiOperation";
+import { JsonFormsCore } from "@jsonforms/core";
+import { ParameterObject } from "oas/types";
 
 enum Mode {
   View,
   TryIt,
 }
 
-export type BodyState = {
-  data: unknown;
-  errors: ajv.ErrorObject[] | undefined;
-};
-
-export type ParametersState = Record<
-  string,
-  {
-    data: unknown;
-    errors: ajv.ErrorObject[] | undefined;
-  }
->;
-
 export interface OpenApiOperationDisplayProps {
+  bodyState: BodyState;
+  onBodyChange: (state: Pick<JsonFormsCore, "data" | "errors">) => void;
+  onParameterChange: (
+    state: Pick<JsonFormsCore, "data" | "errors">,
+    parameter: ParameterObject,
+  ) => void;
+  onReset: () => void;
+  parametersState: ParametersState;
   operation: Operation;
 }
 
 const OpenApiOperationDisplay = ({
+  bodyState,
+  onBodyChange,
+  onParameterChange,
+  onReset,
+  parametersState,
   operation,
 }: OpenApiOperationDisplayProps) => {
   const contentTypeSelectId = useId();
@@ -90,53 +83,6 @@ const OpenApiOperationDisplay = ({
   const jsonFormsProps = useJsonFormsConfig();
   const apiGlobalRequestConfig = useApiGlobalRequestConfig();
 
-  const parametersStateInitializer = useCallback(
-    () =>
-      parameters
-        .map(({ name, schema }) => ({
-          [name]: {
-            data: schema ? generateDefaultValue(schema) : null,
-            errors: undefined,
-          },
-        }))
-        .reduce<ParametersState>(merge, {}),
-    [parameters],
-  );
-  const [parametersState, setParameterState] = useReducer(
-    (
-      state: ParametersState,
-      {
-        data,
-        errors,
-        name,
-      }: {
-        data: ParametersState[""]["data"];
-        errors: ParametersState[""]["errors"];
-        name: string;
-      },
-    ) => ({
-      ...state,
-      [name]: { data, errors },
-    }),
-    {},
-    parametersStateInitializer,
-  );
-  const bodyStateInitializer = useCallback(
-    () => ({
-      data: requestBodySchema ? generateDefaultValue(requestBodySchema) : null,
-      errors: undefined,
-    }),
-    [requestBodySchema],
-  );
-  const [bodyState, updateBodyState] = useReducer(
-    (state: BodyState, { data, errors }: BodyState) => ({
-      ...state,
-      data,
-      errors,
-    }),
-    {},
-    bodyStateInitializer,
-  );
   const [contentType, setContentType] = useState(() =>
     mediaTypeSerializer.findFirstSupportedMediaType(availableContentTypes),
   );
@@ -145,13 +91,6 @@ const OpenApiOperationDisplay = ({
     header: {},
     query: {},
   });
-
-  const resetRequestState = useCallback(() => {
-    Object.entries(parametersStateInitializer()).forEach(([name, state]) =>
-      setParameterState({ name, ...state }),
-    );
-    updateBodyState(bodyStateInitializer());
-  }, [bodyStateInitializer, parametersStateInitializer]);
 
   const [mode, setMode] = useState(Mode.TryIt);
 
@@ -376,7 +315,7 @@ const OpenApiOperationDisplay = ({
             operation={operation}
             onTryExample={({ example, mediaType }) => {
               setContentType(mediaType);
-              updateBodyState({
+              onBodyChange({
                 data: example.value,
                 errors: undefined,
               });
@@ -418,13 +357,9 @@ const OpenApiOperationDisplay = ({
                         <JsonForms
                           {...jsonFormsProps}
                           data={parametersState[parameter.name]?.data}
-                          onChange={({ data, errors }) => {
-                            setParameterState({
-                              data,
-                              errors,
-                              name: parameter.name,
-                            });
-                          }}
+                          onChange={(state) =>
+                            onParameterChange(state, parameter)
+                          }
                           schema={{
                             title: parameter.name,
                             description: parameter.description,
@@ -496,9 +431,7 @@ const OpenApiOperationDisplay = ({
                       <JsonForms
                         {...jsonFormsProps}
                         data={bodyState.data}
-                        onChange={({ data, errors }) => {
-                          updateBodyState({ data, errors });
-                        }}
+                        onChange={onBodyChange}
                         schema={requestBodySchema}
                       />
                     </Stack>
@@ -517,7 +450,7 @@ const OpenApiOperationDisplay = ({
               <Button
                 variant={"outlined"}
                 className={"uppercase"}
-                onClick={() => void resetRequestState()}
+                onClick={onReset}
               >
                 Clear parameters
               </Button>

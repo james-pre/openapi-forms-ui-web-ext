@@ -65,6 +65,7 @@ import { MediaTypeSerializer } from "@/utils/mediaTypeSerializer";
 import { AppConfig, AppConfigContext } from "@/hooks/appConfig.hook";
 import { SandboxLink } from "@/utils/sandboxLink";
 import OpenApiGlobalAuthorization from "@/components/Authorization/OpenApiGlobalAuthorization";
+import OpenApiOperation from "@/components/OpenApiOperation";
 
 const queryClient = new QueryClient();
 
@@ -341,33 +342,10 @@ const App = () => {
                               <AccordionDetails>
                                 <Stack spacing={1}>
                                   {operations.map((operation) => (
-                                    <Accordion
+                                    <OpenApiOperation
                                       key={operation.getOperationId()}
-                                      variant={"outlined"}
-                                      slotProps={{
-                                        heading: { component: "div" },
-                                        transition: { unmountOnExit: false },
-                                      }}
-                                      sx={{
-                                        "::before": {
-                                          display: "none",
-                                        },
-                                      }}
-                                    >
-                                      <AccordionSummary
-                                        expandIcon={<ExpandMore />}
-                                      >
-                                        <OpenApiOperationHeader
-                                          method={operation.method}
-                                          path={operation.path}
-                                        />
-                                      </AccordionSummary>
-                                      <AccordionDetails>
-                                        <OpenApiOperationDisplay
-                                          operation={operation}
-                                        />
-                                      </AccordionDetails>
-                                    </Accordion>
+                                      operation={operation}
+                                    />
                                   ))}
                                 </Stack>
                               </AccordionDetails>
