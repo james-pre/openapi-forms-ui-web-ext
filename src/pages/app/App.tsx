@@ -12,8 +12,9 @@ import "ace-builds/src-noconflict/theme-github";
 
 import "ace-builds/src-noconflict/ext-language_tools";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import OpenApiSchemaInput, {
+  OpenApiSchemaInputProps,
   SchemaSource,
 } from "../../components/OpenApiSchemaInput";
 import Oas from "oas";
@@ -58,14 +59,14 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import HelpIcon from "@/components/HelpIcon";
 import { groupBy } from "lodash-es";
 import { ExpandMore } from "@mui/icons-material";
-import OpenApiOperationHeader from "@/components/OpenApiOperationHeader";
-import OpenApiOperationDisplay from "@/components/OpenApiOperationDisplay";
 import { AuthorizationValues } from "@/utils/authorization";
 import { MediaTypeSerializer } from "@/utils/mediaTypeSerializer";
 import { AppConfig, AppConfigContext } from "@/hooks/appConfig.hook";
 import { SandboxLink } from "@/utils/sandboxLink";
 import OpenApiGlobalAuthorization from "@/components/Authorization/OpenApiGlobalAuthorization";
 import OpenApiOperation from "@/components/OpenApiOperation";
+import SchemaHistory, { SchemaHistoryProps } from "@/components/SchemaHistory";
+import { parseSchema } from "@/json-schema/parseSchema";
 
 const queryClient = new QueryClient();
 
@@ -161,11 +162,43 @@ const App = () => {
     [ajv, cells, renderers],
   );
 
+  const openApiSchemaInputOnSchemaChange = useCallback<
+    OpenApiSchemaInputProps["onSchemaChange"]
+  >(
+    async ({ schema, source }) => {
+      await sandboxLink.upsertSchemaHistoryEntry({
+        lastOpened: Date.now(),
+        schema: JSON.stringify(schema.api),
+        source,
+        title: schema.api.info.title,
+        version: schema.api.info.version,
+      });
+      setSchemaSource(source);
+      setOas(schema);
+    },
+    [sandboxLink],
+  );
+  const schemaHistoryOnEntrySelected = useCallback<
+    Exclude<SchemaHistoryProps["onEntrySelected"], undefined>
+  >(
+    async (entry) => {
+      void sandboxLink.upsertSchemaHistoryEntry({
+        ...entry,
+        lastOpened: Date.now(),
+      });
+      const oas = await parseSchema(entry.schema);
+
+      setSchemaSource(entry.source);
+      setOas(oas);
+    },
+    [sandboxLink],
+  );
+
   return (
     <>
       <AppConfigContext.Provider value={appConfig}>
         <QueryClientProvider client={queryClient}>
-          <ReactQueryDevtools initialIsOpen={false} />
+          {/*<ReactQueryDevtools initialIsOpen={false} />*/}
           <ThemeProvider theme={theme}>
             <ApiGlobalRequestConfigContext.Provider
               value={apiGlobalRequestConfig}
@@ -186,15 +219,17 @@ const App = () => {
 
                       <Stack
                         alignSelf={"center"}
+                        spacing={6}
                         sx={() => ({
                           width: { xs: "100%", md: "50%" },
                         })}
                       >
                         <OpenApiSchemaInput
-                          onSchemaChange={({ schema, source }) => {
-                            setSchemaSource(source);
-                            setOas(schema);
-                          }}
+                          onSchemaChange={openApiSchemaInputOnSchemaChange}
+                        />
+
+                        <SchemaHistory
+                          onEntrySelected={schemaHistoryOnEntrySelected}
                         />
                       </Stack>
                     </Stack>
