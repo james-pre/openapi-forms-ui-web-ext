@@ -38,7 +38,7 @@
     "@mui/material": "^6.1.1",
     "@tanstack/react-query": "^5.56.2",
     "@tanstack/react-query-devtools": "^5.56.2",
-    "@zenfs/core": "^0.16.2",
+    "@zenfs/core": "^1.0.0",
     "ace-builds": "^1.36.2",
     "ajv": "8.16.0",
     "ajv-formats": "^3.0.1",
